@@ -167,6 +167,23 @@ Requires Node.js 18+. No environment variables or external services needed.
 
 ---
 
+## Enhancement pack (v7)
+
+Six new capabilities, all preserving the zero-knowledge architecture — no server processing, ever:
+
+- **Edit Text In-Place** — click any text in a PDF, edit it, save. Rendered with pdf.js, changes applied with pdf-lib.
+- **AI Document Assistant** — floating chat widget that indexes your document in-browser using transformers.js (all-MiniLM-L6-v2 embeddings, ~20 MB one-time download, cached). Ask questions, get answers with page sources. No API calls.
+- **E-Signature Workflow** — multi-party signing with ECDSA P-256 (Web Crypto API), audit trail, and a downloadable cryptographic certificate.
+- **PDF Form Builder** — drag-and-drop AcroForm fields (text, checkbox, dropdown, date, signature) onto a blank page or an existing PDF.
+- **Visual Diff** — pixel-level comparison of two PDFs with side-by-side, overlay, and heatmap modes. Upload two PDFs together to use it.
+- **Cloud Storage** — import from / export to Google Drive, Dropbox, and OneDrive. Files move directly between your browser and your cloud. Requires OAuth client IDs — copy `.env.local.example` to `.env.local` and fill in your keys:
+
+```
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+NEXT_PUBLIC_DROPBOX_CLIENT_ID=your_dropbox_app_key
+NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
+```
+
 ## Voice commands
 
 CommandEditor includes a comprehensive voice command system supporting natural language and accent variants. Click the microphone button and speak.

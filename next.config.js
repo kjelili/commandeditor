@@ -28,6 +28,12 @@ const nextConfig = {
     // out for the browser bundle so webpack doesn't complain.
     config.resolve.alias.canvas = false
 
+    // transformers.js (AI assistant) ships a Node backend we never use —
+    // everything runs on the WASM/browser backend. Alias the Node-only
+    // packages away so webpack doesn't try to bundle native binaries.
+    config.resolve.alias['onnxruntime-node$'] = false
+    config.resolve.alias['sharp$'] = false
+
     if (!isServer) {
       config.resolve.fallback = {
         ...(config.resolve.fallback || {}),

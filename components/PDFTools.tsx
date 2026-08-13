@@ -101,6 +101,12 @@ const TOOLS = [
   { id: 'toneanalyse',  name: 'Tone',        fullName: 'Document Tone Analyser',   emoji:'🎭',desc:'Sentiment heatmap',    requiresPDF:true,color:'#7c3aed',colorLight:'#ede9fe' },
   { id: 'langdetect',   name: 'Language',    fullName: 'Language Detector',        emoji:'🌐',desc:'Detect text language', requiresPDF:true,color:'#059669',colorLight:'#d1fae5' },
   { id: 'citations',    name: 'Citations',   fullName: 'Citation & Ref Extractor', emoji:'📚',desc:'Extract references',   requiresPDF:true,color:'#b45309',colorLight:'#fef3c7' },
+  // ── v7 ENHANCEMENT PACK ──────────────────────────────────────────────────
+  { id: 'inplaceedit', name: 'Edit Text',   fullName: 'Edit PDF Text In-Place',  emoji:'✏️',desc:'Click text to edit',    requiresPDF:true,  color:'#2563eb',colorLight:'#dbeafe' },
+  { id: 'esign',       name: 'E-Sign',      fullName: 'E-Signature Workflow',    emoji:'🖋', desc:'Multi-party signing',   requiresPDF:true,  color:'#0d9488',colorLight:'#ccfbf1' },
+  { id: 'formbuilder', name: 'Form Builder',fullName: 'PDF Form Builder',        emoji:'🧾', desc:'Drag-and-drop fields',  requiresPDF:false, color:'#7c3aed',colorLight:'#ede9fe' },
+  { id: 'visualdiff',  name: 'Visual Diff', fullName: 'Visual PDF Comparison',   emoji:'🔍', desc:'Pixel-level compare',   requiresPDF:true,  color:'#dc2626',colorLight:'#fee2e2' },
+  { id: 'cloudconnect',name: 'Cloud',       fullName: 'Cloud Storage',           emoji:'☁️', desc:'Drive, Dropbox, OneDrive',requiresPDF:false,color:'#0369a1',colorLight:'#e0f2fe' },
 ]
 
 export default function PDFTools({

@@ -8,6 +8,15 @@ import VoiceCommand, { VoiceCommandType } from '@/components/VoiceCommand'
 import OnboardingTour from '@/components/OnboardingTour'
 import PDFHealthScore from '@/components/PDFHealthScore'
 import NextStepChips from '@/components/NextStepChips'
+import dynamic from 'next/dynamic'
+
+// ── v7 Enhancement pack (client-only: heavy pdf.js / transformers.js usage) ──
+const PDFInPlaceEditor = dynamic(() => import('@/components/PDFInPlaceEditor').then(m => m.PDFInPlaceEditor), { ssr: false })
+const ESignatureWorkflow = dynamic(() => import('@/components/ESignatureWorkflow').then(m => m.ESignatureWorkflow), { ssr: false })
+const FormBuilder = dynamic(() => import('@/components/FormBuilder').then(m => m.FormBuilder), { ssr: false })
+const VisualDiff = dynamic(() => import('@/components/VisualDiff').then(m => m.VisualDiff), { ssr: false })
+const CloudConnector = dynamic(() => import('@/components/CloudConnector').then(m => m.CloudConnector), { ssr: false })
+const AIAssistant = dynamic(() => import('@/components/AIAssistant').then(m => m.AIAssistant), { ssr: false })
 
 // Maps each tool to a descriptive filename suffix, so a compressed file
 // downloads as "report-compressed.pdf" rather than a vague "report-edited.pdf".
@@ -47,6 +56,9 @@ const TOOL_SUFFIX: Record<string, string> = {
   ocr: 'searchable',
   extractimgs: 'images',
   tilePrint: 'tiled',
+  inplaceedit: 'edited',
+  esign: 'signed',
+  formbuilder: 'form',
 }
 
 export default function Home() {
@@ -78,6 +90,10 @@ export default function Home() {
   const [provenanceLog, setProvenanceLog] = useState<Array<{op:string;ts:string;inKB:number;outKB?:number}>>([])
   const [memoryCleared, setMemoryCleared] = useState(false)
   const [pwStrength, setPwStrength] = useState(0) // 0-4
+  // ── v7 Enhancement pack state ───────────────────────────────────────────
+  const [enhBytes, setEnhBytes] = useState<Uint8Array | null>(null)
+  const [diffBytes, setDiffBytes] = useState<{ a: Uint8Array; b: Uint8Array } | null>(null)
+  const [aiTextByPage, setAiTextByPage] = useState<string[]>([])
 
   // ── Dark mode init from localStorage ───────────────────────────────────
   useEffect(() => {
@@ -233,6 +249,49 @@ export default function Home() {
 
   const handleProcessingStart = () => { setProcessing(true); setStatusMsg(null); setProgress(null) }
   const handleProgress = (page: number, total: number) => setProgress({ page, total })
+
+  // ── v7: load raw PDF bytes for enhancement tools ──────────────────────────
+  useEffect(() => {
+    const needsBytes = selectedTool === 'inplaceedit' || selectedTool === 'esign' || selectedTool === 'formbuilder'
+    const needsDiff = selectedTool === 'visualdiff'
+    if (!needsBytes && !needsDiff) { setEnhBytes(null); setDiffBytes(null); return }
+    const pdfs = uploadedFiles.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
+    let cancelled = false
+    ;(async () => {
+      try {
+        if (needsBytes && pdfs[0]) {
+          const buf = new Uint8Array(await pdfs[0].arrayBuffer())
+          if (!cancelled) setEnhBytes(buf)
+        } else if (needsDiff && pdfs.length >= 2) {
+          const [a, b] = await Promise.all([pdfs[0].arrayBuffer(), pdfs[1].arrayBuffer()])
+          if (!cancelled) setDiffBytes({ a: new Uint8Array(a), b: new Uint8Array(b) })
+        }
+      } catch (e: any) { showStatus('Failed to read PDF: ' + e.message) }
+    })()
+    return () => { cancelled = true }
+  }, [selectedTool, uploadedFiles])
+
+  // ── v7: extract text per page for the AI assistant ─────────────────────────
+  useEffect(() => {
+    const pdfFile = uploadedFiles.find(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
+    if (!pdfFile) { setAiTextByPage([]); return }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const pdfjsLib = await import('pdfjs-dist')
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+        const pdf = await pdfjsLib.getDocument({ data: await pdfFile.arrayBuffer() }).promise
+        const texts: string[] = []
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          texts.push(content.items.map((it: any) => it.str).join(' '))
+        }
+        if (!cancelled) setAiTextByPage(texts)
+      } catch { if (!cancelled) setAiTextByPage([]) }
+    })()
+    return () => { cancelled = true }
+  }, [uploadedFiles])
 
   // ── Drag files onto tool cards ────────────────────────────────────────────
   useEffect(() => {
@@ -564,6 +623,104 @@ export default function Home() {
           onProgress={handleProgress}
           onSizeChange={setOriginalSize}
         />
+
+        {/* ── v7 Enhancement pack tools ── */}
+        {selectedTool === 'inplaceedit' && enhBytes && (
+          <PDFInPlaceEditor
+            pdfBytes={enhBytes}
+            fileName={uploadedFiles[0]?.name || 'document.pdf'}
+            onSave={(newBytes: Uint8Array) => {
+              handleProcessingComplete(new Blob([newBytes as BlobPart], { type: 'application/pdf' }), 'inplaceedit')
+              handleToolSelect('')
+              showStatus('✓ Text edits applied — ready to download')
+            }}
+            onCancel={() => handleToolSelect('')}
+          />
+        )}
+
+        {selectedTool === 'esign' && enhBytes && (
+          <ESignatureWorkflow
+            pdfBytes={enhBytes}
+            fileName={uploadedFiles[0]?.name || 'document.pdf'}
+            onSave={(signedBytes: Uint8Array, certificate: any) => {
+              handleProcessingComplete(new Blob([signedBytes as BlobPart], { type: 'application/pdf' }), 'esign')
+              // Offer the signing certificate as a separate JSON download
+              try {
+                const certBlob = new Blob([JSON.stringify(certificate, null, 2)], { type: 'application/json' })
+                const url = URL.createObjectURL(certBlob)
+                const a = document.createElement('a'); a.href = url
+                a.download = (uploadedFiles[0]?.name.replace(/\.pdf$/i, '') || 'document') + '_certificate.json'
+                document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                setTimeout(() => URL.revokeObjectURL(url), 5000)
+              } catch {}
+              handleToolSelect('')
+              showStatus('✓ Document signed — certificate downloaded')
+            }}
+            onCancel={() => handleToolSelect('')}
+          />
+        )}
+
+        {selectedTool === 'formbuilder' && (
+          <FormBuilder
+            pdfBytes={enhBytes ?? undefined}
+            onSave={(newBytes: Uint8Array) => {
+              handleProcessingComplete(new Blob([newBytes as BlobPart], { type: 'application/pdf' }), 'formbuilder')
+              handleToolSelect('')
+              showStatus('✓ Form PDF generated — ready to download')
+            }}
+            onCancel={() => handleToolSelect('')}
+          />
+        )}
+
+        {selectedTool === 'visualdiff' && (
+          diffBytes ? (
+            <VisualDiff
+              pdfABytes={diffBytes.a}
+              pdfBBytes={diffBytes.b}
+              fileAName={uploadedFiles[0]?.name || 'Document A.pdf'}
+              fileBName={uploadedFiles[1]?.name || 'Document B.pdf'}
+              onClose={() => handleToolSelect('')}
+            />
+          ) : (
+            <div className="card animate-fade-up text-sm" style={{ color: 'var(--ink-soft)' }}>
+              🔍 <strong>Visual Diff</strong> needs two PDFs. Upload both documents together (select two files), then pick this tool again.
+            </div>
+          )
+        )}
+
+        {selectedTool === 'cloudconnect' && (
+          <div className="card animate-fade-up space-y-4">
+            <p className="text-sm" style={{ color: 'var(--ink-soft)' }}>
+              ☁️ Import from or save to Google Drive, Dropbox or OneDrive. Files transfer directly between your browser
+              and your cloud — never through a server. (Requires OAuth client IDs in <code>.env.local</code>.)
+            </p>
+            <CloudConnector
+              mode="import"
+              onFileSelect={(bytes: Uint8Array, name: string) => {
+                const type = name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream'
+                handleFilesUpload([new File([bytes as BlobPart], name, { type })])
+                showStatus(`✓ ${name} imported from cloud`)
+              }}
+            />
+            {processedFile && processedFile.size > 0 && (
+              <CloudConnector
+                mode="export"
+                onFileSelect={() => {}}
+                onSaveToCloud={(_bytes: Uint8Array, name: string, provider: string) => showStatus(`✓ ${name} saved to ${provider.replace('_', ' ')}`)}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ── v7: floating AI document assistant (available across all tools) ── */}
+        {aiTextByPage.length > 0 && (
+          <AIAssistant
+            pdfTextByPage={aiTextByPage}
+            fileName={uploadedFiles[0]?.name || 'document.pdf'}
+            currentPage={0}
+            onNavigateToPage={() => document.getElementById('pdf-viewer-section')?.scrollIntoView({ behavior: 'smooth' })}
+          />
+        )}
 
         {/* Next step chips after processing */}
         {processedFile && processedFile.size > 0 && (
