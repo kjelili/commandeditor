@@ -107,6 +107,13 @@ const TOOLS = [
   { id: 'formbuilder', name: 'Form Builder',fullName: 'PDF Form Builder',        emoji:'🧾', desc:'Drag-and-drop fields',  requiresPDF:false, color:'#7c3aed',colorLight:'#ede9fe' },
   { id: 'visualdiff',  name: 'Visual Diff', fullName: 'Visual PDF Comparison',   emoji:'🔍', desc:'Pixel-level compare',   requiresPDF:true,  color:'#dc2626',colorLight:'#fee2e2' },
   { id: 'cloudconnect',name: 'Cloud',       fullName: 'Cloud Storage',           emoji:'☁️', desc:'Drive, Dropbox, OneDrive',requiresPDF:false,color:'#0369a1',colorLight:'#e0f2fe' },
+  // ── v8 MODULES PACK ──────────────────────────────────────────────────────
+  { id: 'autoredact',  name: 'Auto-Redact', fullName: 'Auto-Redact Sensitive Data',emoji:'🕵️',desc:'Pattern-based redaction',requiresPDF:true, color:'#1c1917',colorLight:'#f5f5f4' },
+  { id: 'smarttoc',    name: 'Smart TOC',   fullName: 'Smart Table of Contents', emoji:'🧭', desc:'Auto-detect headings',  requiresPDF:true,  color:'#b45309',colorLight:'#fef3c7' },
+  { id: 'barcode',     name: 'Barcodes',    fullName: 'Barcode & QR Suite',      emoji:'📊', desc:'13 formats, gen & scan',requiresPDF:false, color:'#0d9488',colorLight:'#ccfbf1' },
+  { id: 'annotlayers', name: 'Layers',      fullName: 'Annotation Layers',       emoji:'🗂', desc:'Multi-set annotations', requiresPDF:true,  color:'#7c3aed',colorLight:'#ede9fe' },
+  { id: 'batchv2',     name: 'Batch v2',    fullName: 'Batch Engine v2',         emoji:'⚙️', desc:'Rules across files',    requiresPDF:true,  color:'#0369a1',colorLight:'#e0f2fe' },
+  { id: 'plugins',     name: 'Plugins',     fullName: 'Plugin Manager',          emoji:'🔌', desc:'Extend CommandEditor',  requiresPDF:false, color:'#6366f1',colorLight:'#e0e7ff' },
 ]
 
 export default function PDFTools({
@@ -413,8 +420,9 @@ export default function PDFTools({
     // ── v7 enhancement pack: these tools render as overlays in app/page.tsx,
     // so selecting them is all that's needed here. formbuilder and
     // cloudconnect intentionally work without any uploaded files.
-    if (['inplaceedit', 'esign', 'formbuilder', 'visualdiff', 'cloudconnect'].includes(toolId)) {
-      if (['inplaceedit', 'esign'].includes(toolId) && !hasPDFs) { showStatus('Upload a PDF first'); return }
+    if (['inplaceedit', 'esign', 'formbuilder', 'visualdiff', 'cloudconnect',
+         'autoredact', 'smarttoc', 'barcode', 'annotlayers', 'batchv2', 'plugins'].includes(toolId)) {
+      if (['inplaceedit', 'esign', 'autoredact', 'smarttoc', 'annotlayers'].includes(toolId) && !hasPDFs) { showStatus('Upload a PDF first'); return }
       onToolSelect(toolId)
       return
     }

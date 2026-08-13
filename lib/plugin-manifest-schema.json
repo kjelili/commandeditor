@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CommandEditor Plugin Manifest",
+  "type": "object",
+  "required": ["id", "name", "version", "main"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Unique plugin identifier"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable plugin name"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\d+\.\d+\.\d+",
+      "description": "Semver version string"
+    },
+    "description": { "type": "string" },
+    "author": { "type": "string" },
+    "license": { "type": "string" },
+    "main": {
+      "type": "string",
+      "description": "Entry point JavaScript file"
+    },
+    "contributes": {
+      "type": "object",
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["command", "title"],
+            "properties": {
+              "command": { "type": "string" },
+              "title": { "type": "string" },
+              "category": { "type": "string" },
+              "icon": { "type": "string" },
+              "keybinding": { "type": "string" }
+            }
+          }
+        },
+        "panels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title"],
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "icon": { "type": "string" },
+              "location": { "type": "string", "enum": ["sidebar", "bottom", "floating"] }
+            }
+          }
+        }
+      }
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["fs", "http", "clipboard", "notifications", "pdf:read", "pdf:write"]
+      }
+    }
+  }
+}

@@ -18,6 +18,15 @@ const VisualDiff = dynamic(() => import('@/components/VisualDiff').then(m => m.V
 const CloudConnector = dynamic(() => import('@/components/CloudConnector').then(m => m.CloudConnector), { ssr: false })
 const AIAssistant = dynamic(() => import('@/components/AIAssistant').then(m => m.AIAssistant), { ssr: false })
 
+// ── v8 Modules pack ──
+const AutoRedactTool = dynamic(() => import('@/components/AutoRedactTool'), { ssr: false })
+const SmartTOCTool = dynamic(() => import('@/components/SmartTOCTool'), { ssr: false })
+const BarcodeTool = dynamic(() => import('@/components/BarcodeTool'), { ssr: false })
+const AnnotationLayersTool = dynamic(() => import('@/components/AnnotationLayersTool'), { ssr: false })
+const BatchEngineTool = dynamic(() => import('@/components/BatchEngineTool'), { ssr: false })
+const PluginManagerTool = dynamic(() => import('@/components/PluginManagerTool'), { ssr: false })
+const ProfilerBanner = dynamic(() => import('@/components/ProfilerBanner'), { ssr: false })
+
 // Maps each tool to a descriptive filename suffix, so a compressed file
 // downloads as "report-compressed.pdf" rather than a vague "report-edited.pdf".
 // Tools not listed fall back to "edited".
@@ -59,6 +68,10 @@ const TOOL_SUFFIX: Record<string, string> = {
   inplaceedit: 'edited',
   esign: 'signed',
   formbuilder: 'form',
+  autoredact: 'redacted',
+  smarttoc: 'with-toc',
+  barcode: 'with-barcode',
+  annotlayers: 'annotated',
 }
 
 export default function Home() {
@@ -608,6 +621,11 @@ export default function Home() {
           </div>
         )}
 
+        {/* ── v8: smart document profiler suggestion ── */}
+        {uploadedFiles.length > 0 && (
+          <ProfilerBanner file={uploadedFiles[0]} onSelectTool={handleToolSelect} />
+        )}
+
         <PDFTools
           files={uploadedFiles}
           selectedTool={selectedTool}
@@ -710,6 +728,36 @@ export default function Home() {
               />
             )}
           </div>
+        )}
+
+        {/* ── v8 Modules pack tools ── */}
+        {selectedTool === 'autoredact' && uploadedFiles[0] && (
+          <AutoRedactTool file={uploadedFiles[0]} showStatus={showStatus}
+            onComplete={(blob: Blob) => handleProcessingComplete(blob, 'autoredact')}
+            onClose={() => handleToolSelect('')} />
+        )}
+        {selectedTool === 'smarttoc' && uploadedFiles[0] && (
+          <SmartTOCTool file={uploadedFiles[0]} showStatus={showStatus}
+            onComplete={(blob: Blob) => handleProcessingComplete(blob, 'smarttoc')}
+            onClose={() => handleToolSelect('')} />
+        )}
+        {selectedTool === 'barcode' && (
+          <BarcodeTool file={uploadedFiles.find(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) || null}
+            showStatus={showStatus}
+            onComplete={(blob: Blob) => handleProcessingComplete(blob, 'barcode')}
+            onClose={() => handleToolSelect('')} />
+        )}
+        {selectedTool === 'annotlayers' && uploadedFiles[0] && (
+          <AnnotationLayersTool file={uploadedFiles[0]} showStatus={showStatus}
+            onComplete={(blob: Blob) => handleProcessingComplete(blob, 'annotlayers')}
+            onClose={() => handleToolSelect('')} />
+        )}
+        {selectedTool === 'batchv2' && (
+          <BatchEngineTool files={uploadedFiles} showStatus={showStatus}
+            onClose={() => handleToolSelect('')} />
+        )}
+        {selectedTool === 'plugins' && (
+          <PluginManagerTool showStatus={showStatus} onClose={() => handleToolSelect('')} />
         )}
 
         {/* ── v7: floating AI document assistant (available across all tools) ── */}

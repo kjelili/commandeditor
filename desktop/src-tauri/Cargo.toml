@@ -1,0 +1,34 @@
+[package]
+name = "commandeditor-desktop"
+version = "1.0.0"
+description = "CommandEditor Desktop - Native PDF editing powered by Tauri"
+authors = ["CommandEditor Team"]
+license = "MIT"
+repository = "https://github.com/commandeditor/desktop"
+edition = "2021"
+rust-version = "1.70"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = ["shell-open", "updater", "system-tray", "global-shortcut"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+notify = "6.1"
+walkdir = "2.4"
+zip = "0.6"
+image = "0.24"
+pdfium-render = "0.8"
+lopdf = "0.32"
+chrono = "0.4"
+uuid = { version = "1.6", features = ["v4"] }
+base64 = "0.21"
+sha2 = "0.10"
+hex = "0.4"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

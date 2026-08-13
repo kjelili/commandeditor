@@ -167,6 +167,20 @@ Requires Node.js 18+. No environment variables or external services needed.
 
 ---
 
+## Modules pack (v8)
+
+Seven more capabilities, still zero-knowledge:
+
+- **Auto-Redact** — scans the text layer for SSNs, credit cards, emails, phone numbers and more; review findings, then permanently black them out (optional flatten pass rasterizes pages so text is unrecoverable).
+- **Smart TOC** — detects headings by font size/weight heuristics, lets you edit the outline, and inserts a table-of-contents page.
+- **Barcode & QR Suite** — generate 13 symbologies (bwip-js), stamp them into PDFs, and scan pages for QR codes (jsqr).
+- **Annotation Layers** — independent note sets per document (review rounds, departments); toggle, lock, export/import JSON, flatten to PDF.
+- **Batch Engine v2** — IF/THEN rules across many files (compress, watermark, rotate, extract text, rename) with ZIP output.
+- **Plugin SDK** — `window.CommandEditorPluginSDK` lets third parties register commands and panels; manifest schema in `lib/plugin-manifest-schema.json`, example in `lib/plugin-examples/`.
+- **Smart Profiler** — after upload, detects the document type (invoice, contract, academic, scan…) and suggests the right tools.
+
+A Tauri-based native desktop wrapper lives in `desktop/` (scaffold — see `desktop/README.md`).
+
 ## Enhancement pack (v7)
 
 Six new capabilities, all preserving the zero-knowledge architecture — no server processing, ever:
