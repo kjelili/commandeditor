@@ -409,6 +409,16 @@ export default function PDFTools({
 
   const handleToolAction = async (toolId: string, overrideFormat?: 'png' | 'jpg' | 'webp' | 'word') => {
     const fmt = overrideFormat || convertFormat
+
+    // ── v7 enhancement pack: these tools render as overlays in app/page.tsx,
+    // so selecting them is all that's needed here. formbuilder and
+    // cloudconnect intentionally work without any uploaded files.
+    if (['inplaceedit', 'esign', 'formbuilder', 'visualdiff', 'cloudconnect'].includes(toolId)) {
+      if (['inplaceedit', 'esign'].includes(toolId) && !hasPDFs) { showStatus('Upload a PDF first'); return }
+      onToolSelect(toolId)
+      return
+    }
+
     if (files.length === 0) { showStatus('Upload files first'); return }
 
     // Macro recording hook
