@@ -179,6 +179,13 @@ Seven more capabilities, still zero-knowledge:
 - **Plugin SDK** — `window.CommandEditorPluginSDK` lets third parties register commands and panels; manifest schema in `lib/plugin-manifest-schema.json`, example in `lib/plugin-examples/`.
 - **Smart Profiler** — after upload, detects the document type (invoice, contract, academic, scan…) and suggests the right tools.
 
+- **Legal & Academic Citations** — US case law, USC, CFR, Federal Register, EU cases, DOIs and URLs, with export.
+- **Invoice / Receipt Parser** — vendor, invoice number, dates, totals, tax and line items as JSON/CSV.
+- **Contract Clause Extractor** — termination, indemnification, liability, governing law, confidentiality; risk flags and a review report (not legal advice).
+- **Document Fingerprinting** — per-recipient traceable copies (metadata payload + faint watermark) with a Verify tab for leak attribution.
+- **Print to PDF** — text/HTML through the system print dialog with A4, receipt-roll and label templates.
+- **Time-Locked Documents** — portable `.tlock` bundles: AES-256-GCM with PBKDF2 password keys, availability window and open limit (password is the enforcement; dates are viewer policy).
+
 A Tauri-based native desktop wrapper lives in `desktop/` (scaffold — see `desktop/README.md`).
 
 ## Enhancement pack (v7)

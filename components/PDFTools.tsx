@@ -114,6 +114,12 @@ const TOOLS = [
   { id: 'annotlayers', name: 'Layers',      fullName: 'Annotation Layers',       emoji:'🗂', desc:'Multi-set annotations', requiresPDF:true,  color:'#7c3aed',colorLight:'#ede9fe' },
   { id: 'batchv2',     name: 'Batch v2',    fullName: 'Batch Engine v2',         emoji:'⚙️', desc:'Rules across files',    requiresPDF:true,  color:'#0369a1',colorLight:'#e0f2fe' },
   { id: 'plugins',     name: 'Plugins',     fullName: 'Plugin Manager',          emoji:'🔌', desc:'Extend CommandEditor',  requiresPDF:false, color:'#6366f1',colorLight:'#e0e7ff' },
+  { id: 'legalcites',  name: 'Legal Cites', fullName: 'Legal & Academic Citations',emoji:'⚖️',desc:'Case law, USC, DOIs',  requiresPDF:true,  color:'#4338ca',colorLight:'#e0e7ff' },
+  { id: 'invoiceparse',name: 'Invoice',     fullName: 'Invoice / Receipt Parser',emoji:'🧾', desc:'Totals & line items',   requiresPDF:true,  color:'#15803d',colorLight:'#dcfce7' },
+  { id: 'clauses',     name: 'Clauses',     fullName: 'Contract Clause Extractor',emoji:'📜',desc:'Key legal provisions',  requiresPDF:true,  color:'#b45309',colorLight:'#fef3c7' },
+  { id: 'fingerprint', name: 'Fingerprint', fullName: 'Document Fingerprinting', emoji:'🫆', desc:'Traceable copies',      requiresPDF:true,  color:'#1c1917',colorLight:'#f5f5f4' },
+  { id: 'printpdf',    name: 'Print→PDF',   fullName: 'Print to PDF',            emoji:'🖨', desc:'Text/HTML via print',   requiresPDF:false, color:'#0891b2',colorLight:'#cffafe' },
+  { id: 'timelock',    name: 'Time Lock',   fullName: 'Time-Locked Documents',   emoji:'⏳', desc:'Expiring encrypted files',requiresPDF:false,color:'#7c3aed',colorLight:'#ede9fe' },
 ]
 
 export default function PDFTools({
@@ -421,8 +427,10 @@ export default function PDFTools({
     // so selecting them is all that's needed here. formbuilder and
     // cloudconnect intentionally work without any uploaded files.
     if (['inplaceedit', 'esign', 'formbuilder', 'visualdiff', 'cloudconnect',
-         'autoredact', 'smarttoc', 'barcode', 'annotlayers', 'batchv2', 'plugins'].includes(toolId)) {
-      if (['inplaceedit', 'esign', 'autoredact', 'smarttoc', 'annotlayers'].includes(toolId) && !hasPDFs) { showStatus('Upload a PDF first'); return }
+         'autoredact', 'smarttoc', 'barcode', 'annotlayers', 'batchv2', 'plugins',
+         'legalcites', 'invoiceparse', 'clauses', 'fingerprint', 'printpdf', 'timelock'].includes(toolId)) {
+      if (['inplaceedit', 'esign', 'autoredact', 'smarttoc', 'annotlayers',
+           'legalcites', 'invoiceparse', 'clauses', 'fingerprint'].includes(toolId) && !hasPDFs) { showStatus('Upload a PDF first'); return }
       onToolSelect(toolId)
       return
     }

@@ -26,6 +26,12 @@ const AnnotationLayersTool = dynamic(() => import('@/components/AnnotationLayers
 const BatchEngineTool = dynamic(() => import('@/components/BatchEngineTool'), { ssr: false })
 const PluginManagerTool = dynamic(() => import('@/components/PluginManagerTool'), { ssr: false })
 const ProfilerBanner = dynamic(() => import('@/components/ProfilerBanner'), { ssr: false })
+const CitationExtractorTool = dynamic(() => import('@/components/CitationExtractorTool'), { ssr: false })
+const InvoiceParserTool = dynamic(() => import('@/components/InvoiceParserTool'), { ssr: false })
+const ContractClausesTool = dynamic(() => import('@/components/ContractClausesTool'), { ssr: false })
+const FingerprintTool = dynamic(() => import('@/components/FingerprintTool'), { ssr: false })
+const PrintToPDFTool = dynamic(() => import('@/components/PrintToPDFTool'), { ssr: false })
+const TimeLockTool = dynamic(() => import('@/components/TimeLockTool'), { ssr: false })
 
 // Maps each tool to a descriptive filename suffix, so a compressed file
 // downloads as "report-compressed.pdf" rather than a vague "report-edited.pdf".
@@ -758,6 +764,25 @@ export default function Home() {
         )}
         {selectedTool === 'plugins' && (
           <PluginManagerTool showStatus={showStatus} onClose={() => handleToolSelect('')} />
+        )}
+
+        {selectedTool === 'legalcites' && uploadedFiles[0] && (
+          <CitationExtractorTool file={uploadedFiles[0]} showStatus={showStatus} onClose={() => handleToolSelect('')} />
+        )}
+        {selectedTool === 'invoiceparse' && uploadedFiles[0] && (
+          <InvoiceParserTool file={uploadedFiles[0]} showStatus={showStatus} onClose={() => handleToolSelect('')} />
+        )}
+        {selectedTool === 'clauses' && uploadedFiles[0] && (
+          <ContractClausesTool file={uploadedFiles[0]} showStatus={showStatus} onClose={() => handleToolSelect('')} />
+        )}
+        {selectedTool === 'fingerprint' && uploadedFiles[0] && (
+          <FingerprintTool file={uploadedFiles[0]} showStatus={showStatus} onClose={() => handleToolSelect('')} />
+        )}
+        {selectedTool === 'printpdf' && (
+          <PrintToPDFTool showStatus={showStatus} onClose={() => handleToolSelect('')} />
+        )}
+        {selectedTool === 'timelock' && (
+          <TimeLockTool file={uploadedFiles[0] || null} showStatus={showStatus} onClose={() => handleToolSelect('')} />
         )}
 
         {/* ── v7: floating AI document assistant (available across all tools) ── */}
