@@ -194,11 +194,13 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     const clientId = process.env.NEXT_PUBLIC_DROPBOX_CLIENT_ID || '';
     const redirectUri = `${window.location.origin}/api/auth/dropbox/callback`;
 
+    // Implicit token flow returns a short-lived (~4h) access token in the URL
+    // fragment. token_access_type=offline is only valid for the auth-code flow
+    // (response_type=code) and Dropbox rejects it here — so it must be omitted.
     const url = `https://www.dropbox.com/oauth2/authorize?` +
       `client_id=${clientId}&` +
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `response_type=token&` +
-      `token_access_type=offline`;
+      `response_type=token`;
 
     const popup = window.open(url, 'dropbox_auth', 'width=500,height=600');
 
