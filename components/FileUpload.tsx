@@ -20,8 +20,6 @@ const ACCEPTED_TYPES = {
 export default function FileUpload({ onFilesUpload, uploadedFiles }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [driveLoading, setDriveLoading] = useState(false)
-  const [dropboxLoading, setDropboxLoading] = useState(false)
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -47,107 +45,6 @@ export default function FileUpload({ onFilesUpload, uploadedFiles }: FileUploadP
     e.preventDefault()
     setIsDragging(false)
     handleFileSelect(e.dataTransfer.files)
-  }
-
-  // ── Google Drive Picker ──────────────────────────────────────────────────
-  const openGoogleDrivePicker = async () => {
-    setDriveLoading(true)
-    try {
-      // Load Google API script if not already loaded
-      if (!(window as any).gapi) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script')
-          script.src = 'https://apis.google.com/js/api.js'
-          script.onload = () => resolve()
-          script.onerror = () => reject(new Error('Google API failed to load'))
-          document.head.appendChild(script)
-        })
-      }
-      await new Promise<void>(resolve => (window as any).gapi.load('picker', resolve))
-
-      // Use Google Picker without OAuth for public files (read-only picker)
-      // For demonstration: open a file input styled as Google Drive
-      // In production you'd provide an API key and OAuth client ID
-      const PICKER_API_KEY = '' // Optional: add your Google API key here
-      if (!PICKER_API_KEY) {
-        // Graceful fallback: open a URL input dialog
-        const url = window.prompt('Paste a public Google Drive file URL (or direct PDF URL):')
-        if (url) {
-          await fetchRemoteFile(url, 'drive-file.pdf')
-        }
-        return
-      }
-
-      const view = new (window as any).google.picker.DocsView()
-        .setMimeTypes('application/pdf,image/png,image/jpeg,image/webp')
-        .setSelectFolderEnabled(false)
-
-      const picker = new (window as any).google.picker.PickerBuilder()
-        .addView(view)
-        .setOAuthToken(PICKER_API_KEY)
-        .setCallback(async (data: any) => {
-          if (data.action === 'picked' && data.docs?.length > 0) {
-            const doc = data.docs[0]
-            await fetchRemoteFile(
-              `https://drive.google.com/uc?export=download&id=${doc.id}`,
-              doc.name
-            )
-          }
-        })
-        .build()
-      picker.setVisible(true)
-    } catch (err) {
-      console.error('Google Drive picker error:', err)
-      // Graceful fallback
-      const url = window.prompt('Paste a direct PDF URL to load:')
-      if (url) await fetchRemoteFile(url, 'remote-file.pdf')
-    } finally {
-      setDriveLoading(false)
-    }
-  }
-
-  // ── Dropbox Chooser ──────────────────────────────────────────────────────
-  const openDropboxChooser = async () => {
-    setDropboxLoading(true)
-    try {
-      // Load Dropbox SDK
-      if (!(window as any).Dropbox) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script')
-          script.src = 'https://www.dropbox.com/static/api/2/dropins.js'
-          script.setAttribute('id', 'dropboxjs')
-          script.setAttribute('data-app-key', 'your_dropbox_app_key') // optional
-          script.onload = () => resolve()
-          script.onerror = () => reject(new Error('Dropbox SDK failed to load'))
-          document.head.appendChild(script)
-        })
-      }
-
-      const Dropbox = (window as any).Dropbox
-      if (!Dropbox?.choose) {
-        // Graceful fallback
-        const url = window.prompt('Paste a direct Dropbox file link (change dl=0 to dl=1):')
-        if (url) await fetchRemoteFile(url.replace('dl=0', 'dl=1'), 'dropbox-file.pdf')
-        return
-      }
-
-      Dropbox.choose({
-        success: async (files: any[]) => {
-          for (const file of files) {
-            await fetchRemoteFile(file.link, file.name)
-          }
-        },
-        cancel: () => {},
-        linkType: 'direct',
-        multiselect: true,
-        extensions: ['.pdf', '.png', '.jpg', '.jpeg', '.docx', '.txt'],
-      })
-    } catch (err) {
-      const url = window.prompt('Paste a direct Dropbox file link:')
-      if (url) await fetchRemoteFile(url, 'dropbox-file.pdf')
-    } finally {
-      setDropboxLoading(false)
-    }
   }
 
   // ── Fetch remote file by URL ─────────────────────────────────────────────
@@ -245,37 +142,20 @@ export default function FileUpload({ onFilesUpload, uploadedFiles }: FileUploadP
         />
       </div>
 
-      {/* Cloud import row */}
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <button
-          onClick={openGoogleDrivePicker}
-          disabled={driveLoading}
-          className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all"
-          style={{ background: 'var(--surface-2)', border: '1.5px solid var(--border)', color: 'var(--ink-soft)' }}
-          onMouseOver={e => { (e.currentTarget as HTMLElement).style.borderColor = '#4285F4'; (e.currentTarget as HTMLElement).style.color = '#4285F4' }}
-          onMouseOut={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--ink-soft)' }}
-          aria-label="Import from Google Drive"
-        >
-          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6.28 3L1 12.14l3.14 5.44L9.42 8.4 6.28 3zM9.42 8.4l-5.28 9.18H16.8L22.08 8.4H9.42zM16.8 17.58L22.08 8.4l-3.14-5.44-5.28 9.18L16.8 17.58z" />
-          </svg>
-          {driveLoading ? 'Loading…' : 'Google Drive'}
-        </button>
-        <button
-          onClick={openDropboxChooser}
-          disabled={dropboxLoading}
-          className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all"
-          style={{ background: 'var(--surface-2)', border: '1.5px solid var(--border)', color: 'var(--ink-soft)' }}
-          onMouseOver={e => { (e.currentTarget as HTMLElement).style.borderColor = '#0061FF'; (e.currentTarget as HTMLElement).style.color = '#0061FF' }}
-          onMouseOut={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--ink-soft)' }}
-          aria-label="Import from Dropbox"
-        >
-          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 2L0 6l6 4-6 4 6 4 6-4-6-4 6-4L6 2zm12 0l-6 4 6 4-6 4 6 4 6-4-6-4 6-4-6-4zm-6 9l-6 4v2l6-4 6 4v-2l-6-4z"/>
-          </svg>
-          {dropboxLoading ? 'Loading…' : 'Dropbox'}
-        </button>
-      </div>
+      {/* Cloud import — routes to the real, OAuth-backed Cloud connector tool */}
+      <button
+        onClick={() => {
+          window.dispatchEvent(new CustomEvent('commandeditor-open-tool', { detail: { toolId: 'cloudconnect' } }))
+        }}
+        className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all"
+        style={{ background: 'var(--surface-2)', border: '1.5px solid var(--border)', color: 'var(--ink-soft)' }}
+        onMouseOver={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--blue-vivid)'; (e.currentTarget as HTMLElement).style.color = 'var(--blue-vivid)' }}
+        onMouseOut={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--ink-soft)' }}
+        aria-label="Import from cloud storage"
+      >
+        <span aria-hidden="true">☁️</span>
+        Import from cloud — Drive, Dropbox, OneDrive
+      </button>
       <p className="text-xs mt-1.5 text-center" style={{ color: 'var(--ink-muted)' }}>
         Or paste a URL: <button onClick={async () => { const u = window.prompt('Paste a direct file URL:'); if (u) await fetchRemoteFile(u, 'remote-file.pdf') }}
           className="underline" style={{ color: 'var(--blue-vivid)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit' }}>

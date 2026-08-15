@@ -332,6 +332,18 @@ export default function Home() {
     return () => window.removeEventListener('commandeditor-drop-on-tool', handler)
   }, [])
 
+  // ── Open a tool by id (e.g. the "Import from cloud" button in the uploader) ──
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { toolId } = (e as CustomEvent).detail || {}
+      if (!toolId) return
+      handleToolSelect(toolId)
+      document.getElementById('app-section')?.scrollIntoView({ behavior: 'smooth' })
+    }
+    window.addEventListener('commandeditor-open-tool', handler)
+    return () => window.removeEventListener('commandeditor-open-tool', handler)
+  }, [])
+
   const handleEditClick = (pageIndex: number, x: number, y: number) => {
     const handler = (window as any).__editClickHandler
     if (handler) handler(pageIndex, x, y)
