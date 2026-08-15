@@ -1,7 +1,7 @@
 {
   "name": "CommandEditor \u2014 Voice-controlled PDF toolkit",
   "short_name": "CommandEditor",
-  "description": "50+ PDF tools and 50+ voice commands. Runs entirely in your browser \u2014 your files never leave your device. Free, no sign-up.",
+  "description": "70+ PDF tools including an on-device AI assistant, e-signatures, and 50+ voice commands. Runs entirely in your browser \u2014 your files never leave your device. Free, no sign-up.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -422,7 +422,7 @@ export default function Home() {
               </svg>
             </div>
             <span className="font-bold text-lg tracking-tight text-white" style={{ fontFamily: 'Syne, sans-serif' }}>CommandEditor</span>
-            <span className="badge text-xs" style={{ background: 'rgba(96,165,250,0.15)', color: 'var(--blue-glow)', fontSize: '10px' }}>v6</span>
+            <span className="badge text-xs" style={{ background: 'rgba(96,165,250,0.15)', color: 'var(--blue-glow)', fontSize: '10px' }}>v8</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="badge hidden sm:inline-flex" style={{ background: 'rgba(5,150,105,0.15)', color: '#34d399' }}>
@@ -509,7 +509,8 @@ export default function Home() {
             </h1>
             <p className="text-lg md:text-xl mb-10 max-w-xl animate-fade-up"
                style={{ color: 'rgba(255,255,255,0.75)', animationDelay: '0.16s', lineHeight: 1.7 }}>
-              The first voice-controlled PDF toolkit — 50+ hands-free commands and 50+ tools.
+              70+ tools in one private toolkit — now with an on-device AI assistant, cryptographic
+              e-signatures, document fingerprinting, and 50+ hands-free voice commands.
               Everything runs in your browser. Your documents never touch a server.
             </p>
             <div className="flex flex-wrap items-center gap-4 animate-fade-up" style={{ animationDelay: '0.24s' }}>
@@ -525,7 +526,7 @@ export default function Home() {
               </button>
             </div>
             <div className="flex flex-wrap gap-10 mt-16 animate-fade-up" style={{ animationDelay: '0.32s' }}>
-              {[{ val: '50+', label: 'PDF tools' }, { val: '50+', label: 'Voice commands' }, { val: '0', label: 'Server uploads' }, { val: '∞', label: 'File size limit' }].map(s => (
+              {[{ val: '70+', label: 'PDF tools' }, { val: '50+', label: 'Voice commands' }, { val: '0', label: 'Server uploads' }, { val: '∞', label: 'File size limit' }].map(s => (
                 <div key={s.label}>
                   <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'Syne, sans-serif', background: 'linear-gradient(90deg, white, var(--blue-glow))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{s.val}</div>
                   <div className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{s.label}</div>
@@ -554,6 +555,36 @@ export default function Home() {
               </div>
             ))}
             <span style={{ color: 'var(--border-strong)' }}>+14 more</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== WHAT'S NEW / DIFFERENTIATORS ===== */}
+      <section className="border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="text-center mb-14">
+            <p className="section-label mb-3">New in v8</p>
+            <h2 className="text-4xl md:text-5xl mb-4">Beyond the basics.</h2>
+            <p className="text-base max-w-2xl mx-auto" style={{ color: 'var(--ink-muted)' }}>
+              Capabilities you won&apos;t find in other free, in-browser PDF tools — every one runs
+              locally, with your files never leaving your device.
+            </p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { icon: '🤖', title: 'On-device AI assistant', desc: 'Ask questions about any document and get answers with page sources. Runs entirely in your browser — no API, no data sent anywhere.' },
+              { icon: '🖋', title: 'Cryptographic e-signatures', desc: 'Multi-party signing with ECDSA P-256 and a downloadable certificate. Court-admissible, and free — no per-envelope fees.' },
+              { icon: '🫆', title: 'Document fingerprinting', desc: 'Issue per-recipient traceable copies, then identify who leaked a document with the built-in verifier.' },
+              { icon: '⏳', title: 'Time-locked documents', desc: 'Encrypt files into portable bundles with a password, availability window, and open limit — AES-256 all the way.' },
+              { icon: '⚖️', title: 'Legal & financial extraction', desc: 'Pull case-law citations, contract clauses with risk flags, and invoice line items — no cloud, no upload.' },
+              { icon: '🔌', title: 'Plugin SDK', desc: 'Extend CommandEditor with your own tools and commands. Plugins run in your browser under the same zero-knowledge guarantee.' },
+            ].map((f, i) => (
+              <div key={f.title} className="card animate-fade-up" style={{ animationDelay: `${i * 0.08}s` }}>
+                <div className="text-2xl mb-3">{f.icon}</div>
+                <p className="font-semibold text-base mb-1.5" style={{ color: 'var(--ink)' }}>{f.title}</p>
+                <p className="text-sm" style={{ color: 'var(--ink-muted)', lineHeight: 1.6 }}>{f.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -953,7 +984,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <p className="section-label mb-3">Everything included</p>
-            <h2 className="text-4xl md:text-5xl mb-4">50+ tools. Zero cost.</h2>
+            <h2 className="text-4xl md:text-5xl mb-4">70+ tools. Zero cost.</h2>
             <p className="text-base max-w-xl mx-auto" style={{ color: 'var(--ink-muted)' }}>
               Every tool runs entirely in your browser. No sign-up, no subscriptions, no limits.
             </p>

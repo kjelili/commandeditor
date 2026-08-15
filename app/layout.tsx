@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     template: '%s · CommandEditor',
   },
   description:
-    'CommandEditor is the first voice-controlled PDF and document toolkit — 50+ hands-free commands, fully accessible. 50+ tools — merge, split, compress, sign, annotate, OCR, redact, convert, encrypt — all running in your browser. Your files never leave your device.',
+    'CommandEditor is a private, browser-based PDF & document toolkit with 70+ tools — including an on-device AI assistant, cryptographic e-signatures, document fingerprinting, redaction, OCR, and 50+ hands-free voice commands. Everything runs in your browser; your files never leave your device.',
   keywords: [
     'PDF editor', 'free PDF tools', 'merge PDF', 'split PDF', 'compress PDF',
     'PDF voice commands', 'voice-controlled PDF', 'hands-free PDF', 'accessible PDF editor',
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'CommandEditor — Voice-controlled PDF toolkit, free and private',
     description:
-      '50+ hands-free voice commands, 50+ PDF tools, zero uploads. Accessible by design — every operation runs in your browser, your documents never leave your device.',
+      '70+ PDF tools, an on-device AI assistant, cryptographic e-signatures, and 50+ hands-free voice commands — zero uploads. Every operation runs in your browser; your documents never leave your device.',
     type: 'website',
     url: 'https://commandeditor.com',
     siteName: 'CommandEditor',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'CommandEditor — Voice-controlled PDF toolkit',
-    description: 'The first voice-controlled PDF toolkit. 50+ hands-free commands, 50+ tools, all in your browser. No uploads, no sign-up, free forever.',
+    description: 'A private PDF toolkit with 70+ tools — AI assistant, e-signatures, redaction, and 50+ voice commands, all in your browser. No uploads, no sign-up, free forever.',
   },
   robots: { index: true, follow: true },
 }
@@ -64,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               applicationCategory: 'ProductivityApplication',
               operatingSystem: 'Any (browser-based)',
               description:
-                'Voice-controlled PDF and document toolkit. 50+ tools that run entirely in your browser. Your files never leave your device.',
+                'Private PDF and document toolkit. 70+ tools — including an on-device AI assistant and cryptographic e-signatures — that run entirely in your browser. Your files never leave your device.',
               offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
               featureList: [
                 'Merge, split, compress PDF',
