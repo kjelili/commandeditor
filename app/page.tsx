@@ -337,8 +337,14 @@ export default function Home() {
     const handler = (e: Event) => {
       const { toolId } = (e as CustomEvent).detail || {}
       if (!toolId) return
-      handleToolSelect(toolId)
-      document.getElementById('app-section')?.scrollIntoView({ behavior: 'smooth' })
+      // Use the always-current ref so we never call a stale handler
+      ;(handleToolSelectRef.current || handleToolSelect)(toolId)
+      // The tool panel renders below the grid, so scroll to it once React
+      // has painted it — target the panel itself, not the app-section top.
+      setTimeout(() => {
+        const panel = document.getElementById(`${toolId}-panel`) || document.getElementById('app-section')
+        panel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 120)
     }
     window.addEventListener('commandeditor-open-tool', handler)
     return () => window.removeEventListener('commandeditor-open-tool', handler)
@@ -756,7 +762,7 @@ export default function Home() {
         )}
 
         {selectedTool === 'cloudconnect' && (
-          <div className="card animate-fade-up space-y-4">
+          <div id="cloudconnect-panel" className="card animate-fade-up space-y-4">
             <p className="text-sm" style={{ color: 'var(--ink-soft)' }}>
               ☁️ Import from or save to Google Drive, Dropbox or OneDrive. Files transfer directly between your browser
               and your cloud — never through a server. (Requires OAuth client IDs in <code>.env.local</code>.)
