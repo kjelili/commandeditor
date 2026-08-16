@@ -160,6 +160,48 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     }
   };
 
+  // Google File Picker — the sanctioned way to browse files under the
+  // privacy-preserving drive.file scope (which cannot list existing files).
+  // Requires a Google API key (NEXT_PUBLIC_GOOGLE_API_KEY) + the Picker API.
+  const openGooglePicker = async () => {
+    const auth = authStates.google_drive;
+    if (!auth) return;
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '';
+    if (!apiKey) {
+      alert('Google Picker needs an API key. Add NEXT_PUBLIC_GOOGLE_API_KEY (from Google Cloud Console → Credentials → API key) and enable the "Google Picker API".');
+      return;
+    }
+    const loadScript = (src: string) => new Promise<void>((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) return resolve();
+      const el = document.createElement('script');
+      el.src = src; el.onload = () => resolve(); el.onerror = () => reject(new Error('Failed to load ' + src));
+      document.head.appendChild(el);
+    });
+    try {
+      await loadScript('https://apis.google.com/js/api.js');
+      await new Promise<void>((resolve) => (window as any).gapi.load('picker', { callback: () => resolve() }));
+      const g = (window as any).google;
+      const view = new g.picker.DocsView(g.picker.ViewId.DOCS)
+        .setMimeTypes('application/pdf')
+        .setMode(g.picker.DocsViewMode.LIST);
+      const picker = new g.picker.PickerBuilder()
+        .addView(view)
+        .setOAuthToken(auth.accessToken)
+        .setDeveloperKey(apiKey)
+        .setCallback((data: any) => {
+          if (data.action === g.picker.Action.PICKED && data.docs?.length) {
+            const doc = data.docs[0];
+            downloadFromGoogleDrive(doc.id, doc.name);
+          }
+        })
+        .build();
+      picker.setVisible(true);
+    } catch (e: any) {
+      console.error('Picker error:', e);
+      alert('Could not open Google Picker: ' + e.message);
+    }
+  };
+
   const uploadToGoogleDrive = async (bytes: Uint8Array, name: string) => {
     const auth = authStates.google_drive;
     if (!auth) return;
@@ -468,6 +510,26 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
 
           {mode === 'import' && (
             <>
+              {selectedProvider === 'google_drive' && (
+                <div style={{ marginBottom: '12px' }}>
+                  <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                    For your privacy, Google only shares files you explicitly choose. Click below to pick PDFs from your Drive.
+                  </p>
+                  <button onClick={openGooglePicker} style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: 'white', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+                    📂 Browse Google Drive…
+                  </button>
+                </div>
+              )}
+              {selectedProvider === 'dropbox' && (
+                <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '10px' }}>
+                  Showing PDFs from across your Dropbox. If this stays empty, your Dropbox app may be limited to its own &ldquo;App folder&rdquo;.
+                </p>
+              )}
+              {selectedProvider === 'onedrive' && (
+                <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '10px' }}>
+                  Searching your OneDrive for PDF files.
+                </p>
+              )}
               <input
                 type="text"
                 placeholder="Search files..."
@@ -492,7 +554,9 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {displayedFiles.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-                      {searchQuery ? 'No matching PDF files' : 'No PDF files found'}
+                      {selectedProvider === 'google_drive'
+                        ? 'Use “Browse Google Drive…” above to pick a PDF.'
+                        : searchQuery ? 'No matching PDF files' : 'No PDF files found'}
                     </div>
                   )}
                   {displayedFiles.map(file => (
