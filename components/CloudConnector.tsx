@@ -225,30 +225,89 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
 
     setIsLoading(true);
     try {
-      const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+      // Recursive listing so PDFs in sub-folders are found — not just the root.
+      const collected: any[] = [];
+      let res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${auth.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ path, limit: 50 }),
+        headers: { Authorization: `Bearer ${auth.accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, recursive: true, limit: 2000 }),
       });
+      let data = await res.json();
+      collected.push(...(data.entries || []));
+      let pages = 0;
+      while (data.has_more && data.cursor && pages < 10) {
+        res = await fetch('https://api.dropboxapi.com/2/files/list_folder/continue', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${auth.accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cursor: data.cursor }),
+        });
+        data = await res.json();
+        collected.push(...(data.entries || []));
+        pages++;
+      }
 
-      const data = await response.json();
-      const mapped: CloudFile[] = data.entries
-        .filter((f: any) => f['.tag'] === 'file' && f.name.endsWith('.pdf'))
+      const mapped: CloudFile[] = collected
+        .filter((f: any) => f['.tag'] === 'file' && f.name.toLowerCase().endsWith('.pdf'))
         .map((f: any) => ({
           id: f.id,
           name: f.name,
           mimeType: 'application/pdf',
           size: f.size,
           modifiedTime: f.server_modified,
-          provider: 'dropbox',
-        }));
+          provider: 'dropbox' as CloudProvider,
+        }))
+        .sort((a, b) => new Date(b.modifiedTime).getTime() - new Date(a.modifiedTime).getTime());
 
       setFiles(mapped);
     } catch (error) {
       console.error('Failed to list files:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── OneDrive (Microsoft Graph) listing + download ──────────────────────────
+  const listOneDriveFiles = async () => {
+    const auth = authStates.onedrive;
+    if (!auth) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(
+        "https://graph.microsoft.com/v1.0/me/drive/root/search(q='.pdf')?$top=50&$select=id,name,size,lastModifiedDateTime",
+        { headers: { Authorization: `Bearer ${auth.accessToken}` } }
+      );
+      const data = await res.json();
+      const mapped: CloudFile[] = (data.value || [])
+        .filter((f: any) => f.name?.toLowerCase().endsWith('.pdf'))
+        .map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          mimeType: 'application/pdf',
+          size: f.size || 0,
+          modifiedTime: f.lastModifiedDateTime,
+          provider: 'onedrive' as CloudProvider,
+        }));
+      setFiles(mapped);
+    } catch (error) {
+      console.error('Failed to list OneDrive files:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const downloadFromOneDrive = async (fileId: string, name: string) => {
+    const auth = authStates.onedrive;
+    if (!auth) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${fileId}/content`, {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      });
+      const arrayBuffer = await (await res.blob()).arrayBuffer();
+      onFileSelect(new Uint8Array(arrayBuffer), name);
+    } catch (error) {
+      console.error('OneDrive download failed:', error);
+      alert('Failed to download file');
     } finally {
       setIsLoading(false);
     }
@@ -324,6 +383,7 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
       // Already authenticated, list files
       if (provider === 'google_drive') listGoogleDriveFiles();
       else if (provider === 'dropbox') listDropboxFiles();
+      else if (provider === 'onedrive') listOneDriveFiles();
     }
   };
 
@@ -331,6 +391,7 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     if (mode === 'import') {
       if (file.provider === 'google_drive') downloadFromGoogleDrive(file.id, file.name);
       else if (file.provider === 'dropbox') downloadFromDropbox(file.id, file.name);
+      else if (file.provider === 'onedrive') downloadFromOneDrive(file.id, file.name);
     }
   };
 
@@ -340,6 +401,10 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
       // onSaveToCloud would need to be wired up with actual bytes
     }
   };
+
+  const displayedFiles = searchQuery
+    ? files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : files;
 
   return (
     <div style={{ padding: '20px', maxWidth: '600px' }}>
@@ -408,7 +473,7 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
                 placeholder="Search files..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && listGoogleDriveFiles()}
+                onKeyDown={e => { if (e.key === 'Enter' && selectedProvider === 'google_drive') listGoogleDriveFiles() }}
                 style={{
                   width: '100%',
                   padding: '10px 14px',
@@ -425,12 +490,12 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {files.length === 0 && (
+                  {displayedFiles.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-                      No PDF files found
+                      {searchQuery ? 'No matching PDF files' : 'No PDF files found'}
                     </div>
                   )}
-                  {files.map(file => (
+                  {displayedFiles.map(file => (
                     <button
                       key={file.id}
                       onClick={() => handleFileClick(file)}
