@@ -355,23 +355,38 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     setIsLoading(true);
     setErrorMsg('');
     try {
-      // Search 'pdf' (not '.pdf') — Graph tokenises the query, so the bare
-      // extension matches more reliably; we still filter to .pdf below.
-      const res = await fetch(
-        "https://graph.microsoft.com/v1.0/me/drive/root/search(q='pdf')?$top=200&$select=id,name,size,lastModifiedDateTime",
-        { headers: { Authorization: `Bearer ${auth.accessToken}` } }
-      );
-      if (!res.ok) {
-        const t = await res.text();
-        let msg = t;
-        try { msg = JSON.parse(t).error?.message || t; } catch {}
-        setErrorMsg(`OneDrive couldn't list files: ${msg}`);
-        setFiles([]);
-        return;
+      // Walk folders via /children instead of search(): search only returns
+      // files Microsoft has *indexed*, so recent uploads are missed. Traversal
+      // finds every PDF, newest first.
+      const headers = { Authorization: `Bearer ${auth.accessToken}` };
+      const select = '$top=200&$select=id,name,size,lastModifiedDateTime,folder,file';
+      const collected: any[] = [];
+      const queue: string[] = ['root'];
+      let calls = 0;
+      while (queue.length && calls < 60) {
+        const id = queue.shift()!;
+        let next: string | null = id === 'root'
+          ? `https://graph.microsoft.com/v1.0/me/drive/root/children?${select}`
+          : `https://graph.microsoft.com/v1.0/me/drive/items/${id}/children?${select}`;
+        while (next && calls < 60) {
+          const res: Response = await fetch(next, { headers });
+          calls++;
+          if (!res.ok) {
+            const t = await res.text();
+            let msg = t; try { msg = JSON.parse(t).error?.message || t; } catch {}
+            setErrorMsg(`OneDrive couldn't list files: ${msg}`);
+            setFiles([]);
+            return;
+          }
+          const data: any = await res.json();
+          for (const item of data.value || []) {
+            if (item.folder) queue.push(item.id);
+            else if (item.name?.toLowerCase().endsWith('.pdf')) collected.push(item);
+          }
+          next = data['@odata.nextLink'] || null;
+        }
       }
-      const data = await res.json();
-      const mapped: CloudFile[] = (data.value || [])
-        .filter((f: any) => f.name?.toLowerCase().endsWith('.pdf'))
+      const mapped: CloudFile[] = collected
         .map((f: any) => ({
           id: f.id,
           name: f.name,
@@ -379,10 +394,12 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
           size: f.size || 0,
           modifiedTime: f.lastModifiedDateTime,
           provider: 'onedrive' as CloudProvider,
-        }));
+        }))
+        .sort((a, b) => new Date(b.modifiedTime).getTime() - new Date(a.modifiedTime).getTime());
       setFiles(mapped);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to list OneDrive files:', error);
+      setErrorMsg('OneDrive couldn\'t list files: ' + (error.message || 'network error'));
     } finally {
       setIsLoading(false);
     }
@@ -393,9 +410,19 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     if (!auth) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${fileId}/content`, {
-        headers: { Authorization: `Bearer ${auth.accessToken}` },
-      });
+      // Ask Graph for the item's pre-authenticated download URL, then fetch that
+      // directly WITHOUT the auth header. The /content endpoint 302-redirects to
+      // a CDN host that rejects the Authorization header (causing 'Failed to
+      // fetch'); the downloadUrl is short-lived and needs no header.
+      const metaRes = await fetch(
+        `https://graph.microsoft.com/v1.0/me/drive/items/${fileId}?select=id,name,@microsoft.graph.downloadUrl`,
+        { headers: { Authorization: `Bearer ${auth.accessToken}` } }
+      );
+      if (!metaRes.ok) throw new Error('OneDrive returned ' + metaRes.status);
+      const meta = await metaRes.json();
+      const dlUrl = meta['@microsoft.graph.downloadUrl'] || meta['@content.downloadUrl'];
+      if (!dlUrl) throw new Error('No download URL returned for this file');
+      const res = await fetch(dlUrl);
       await deliverDownloadedFile(res, name, 'OneDrive');
     } catch (error: any) {
       console.error('OneDrive download failed:', error);
