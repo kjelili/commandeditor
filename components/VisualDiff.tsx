@@ -67,8 +67,8 @@ export const VisualDiff: React.FC<Props> = ({
   const comparePDFs = async () => {
     setIsProcessing(true);
     try {
-      const pdfA = await pdfjs.getDocument({ data: pdfABytes }).promise;
-      const pdfB = await pdfjs.getDocument({ data: pdfBBytes }).promise;
+      const pdfA = await pdfjs.getDocument({ data: pdfABytes.slice() }).promise;
+      const pdfB = await pdfjs.getDocument({ data: pdfBBytes.slice() }).promise;
 
       const maxPages = Math.max(pdfA.numPages, pdfB.numPages);
       setNumPages({ a: pdfA.numPages, b: pdfB.numPages });
@@ -289,8 +289,8 @@ export const VisualDiff: React.FC<Props> = ({
     if (!result) return;
 
     // Render original pages
-    const pdfA = await pdfjs.getDocument({ data: pdfABytes }).promise;
-    const pdfB = await pdfjs.getDocument({ data: pdfBBytes }).promise;
+    const pdfA = await pdfjs.getDocument({ data: pdfABytes.slice() }).promise;
+    const pdfB = await pdfjs.getDocument({ data: pdfBBytes.slice() }).promise;
 
     if (currentPage < pdfA.numPages && canvasARef.current) {
       const page = await pdfA.getPage(currentPage + 1);
