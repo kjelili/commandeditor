@@ -35,6 +35,7 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
   const [isLoading, setIsLoading] = useState(false);
   const [currentPath, setCurrentPath] = useState('root');
   const [searchQuery, setSearchQuery] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Load auth states from localStorage on mount
   useEffect(() => {
@@ -291,6 +292,7 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     if (!auth) return;
 
     setIsLoading(true);
+    setErrorMsg('');
     try {
       // Recursive listing so PDFs in sub-folders are found — not just the root.
       const collected: any[] = [];
@@ -299,6 +301,19 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
         headers: { Authorization: `Bearer ${auth.accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ path, recursive: true, limit: 2000 }),
       });
+      if (!res.ok) {
+        const t = await res.text();
+        let summary = t;
+        try { summary = JSON.parse(t).error_summary || t; } catch {}
+        setErrorMsg(
+          `Dropbox couldn't list files: ${summary}\n\n` +
+          (/missing_scope/.test(summary)
+            ? 'Enable "files.metadata.read" (and files.content.read) in your Dropbox app → Permissions, then disconnect and reconnect.'
+            : 'Check the Dropbox app permissions and access type.')
+        );
+        setFiles([]);
+        return;
+      }
       let data = await res.json();
       collected.push(...(data.entries || []));
       let pages = 0;
@@ -338,11 +353,22 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     const auth = authStates.onedrive;
     if (!auth) return;
     setIsLoading(true);
+    setErrorMsg('');
     try {
+      // Search 'pdf' (not '.pdf') — Graph tokenises the query, so the bare
+      // extension matches more reliably; we still filter to .pdf below.
       const res = await fetch(
-        "https://graph.microsoft.com/v1.0/me/drive/root/search(q='.pdf')?$top=50&$select=id,name,size,lastModifiedDateTime",
+        "https://graph.microsoft.com/v1.0/me/drive/root/search(q='pdf')?$top=200&$select=id,name,size,lastModifiedDateTime",
         { headers: { Authorization: `Bearer ${auth.accessToken}` } }
       );
+      if (!res.ok) {
+        const t = await res.text();
+        let msg = t;
+        try { msg = JSON.parse(t).error?.message || t; } catch {}
+        setErrorMsg(`OneDrive couldn't list files: ${msg}`);
+        setFiles([]);
+        return;
+      }
       const data = await res.json();
       const mapped: CloudFile[] = (data.value || [])
         .filter((f: any) => f.name?.toLowerCase().endsWith('.pdf'))
@@ -438,6 +464,7 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
   // Provider selection handler
   const handleProviderSelect = (provider: CloudProvider) => {
     setSelectedProvider(provider);
+    setErrorMsg(''); setFiles([]);
     if (!authStates[provider]) {
       if (provider === 'google_drive') authGoogleDrive();
       else if (provider === 'dropbox') authDropbox();
@@ -574,8 +601,10 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {displayedFiles.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-                      {selectedProvider === 'google_drive'
+                    <div style={{ textAlign: 'center', padding: '40px', color: errorMsg ? '#dc2626' : '#9ca3af', fontSize: '13px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                      {errorMsg
+                        ? errorMsg
+                        : selectedProvider === 'google_drive'
                         ? 'Use “Browse Google Drive…” above to pick a PDF.'
                         : searchQuery ? 'No matching PDF files' : 'No PDF files found'}
                     </div>
