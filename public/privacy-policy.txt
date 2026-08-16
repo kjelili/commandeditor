@@ -1,0 +1,61 @@
+CommandEditor — Privacy Policy
+Last updated: 16 August 2026
+
+CommandEditor is a browser-based document toolkit built around a simple
+principle: your files stay on your device. This policy explains what that
+means in practice and the few places where data does leave your browser.
+
+1. NO ACCOUNTS, NO FILE UPLOADS
+   CommandEditor has no sign-up and no login. When you open, edit, convert,
+   sign, redact or otherwise process a document, that work happens entirely
+   inside your web browser using JavaScript and WebAssembly. Your files are
+   never uploaded to, stored on, or seen by CommandEditor's servers, because
+   there is no such server component for document processing.
+
+2. WHAT WE STORE ON YOUR DEVICE
+   To make the app usable, CommandEditor saves small amounts of data in your
+   browser's local storage — never on our servers. This can include your
+   dark-mode preference, the names and sizes of recently opened files (for the
+   "recent files" list), fingerprint records you create, and similar settings.
+   This data lives only in your browser and is removed if you clear your
+   browser storage.
+
+3. OPTIONAL CLOUD CONNECTORS
+   If you choose to connect Google Drive, Dropbox or OneDrive, authentication
+   and file transfer happen directly between your browser and that provider.
+   CommandEditor does not receive or store your cloud credentials or your
+   files. Your use of those services is governed by their own privacy
+   policies. If you never use a connector, no such connection is made.
+
+4. OPTIONAL AI ASSISTANT
+   The in-browser AI assistant downloads its language model from a public CDN
+   (Hugging Face) the first time you use it. Only the model files are
+   downloaded to your browser; the content of your documents is analysed
+   locally and is not sent to Hugging Face, CommandEditor, or any other party.
+
+5. HOSTING AND SERVER LOGS
+   The CommandEditor website is served as static files by our hosting
+   provider. Like virtually all web hosts, it may automatically record
+   standard technical request information (such as IP address, browser type
+   and timestamps) for security and reliability. These logs are not used to
+   identify you and are not linked to your documents, which never reach the
+   server.
+
+6. NO SALE OF DATA, NO ADVERTISING
+   CommandEditor does not sell, rent or trade personal information, and does
+   not run third-party advertising.
+
+7. CHILDREN
+   CommandEditor is a general-purpose tool and is not directed at children
+   under 13. We do not knowingly collect personal information from children.
+
+8. CHANGES
+   We may update this policy as the product evolves. Material changes will be
+   reflected by the "Last updated" date above.
+
+9. CONTACT
+   Questions about this policy can be sent to the project maintainer via the
+   repository at https://github.com/kjelili/commandeditor.
+
+This document is provided for transparency and does not constitute legal
+advice.

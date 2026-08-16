@@ -433,13 +433,18 @@ export default function Home() {
            className="sticky top-0 z-40 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                 style={{ background: 'linear-gradient(135deg, var(--blue-bright), var(--blue-vivid))' }}>
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <span className="font-bold text-lg tracking-tight text-white" style={{ fontFamily: 'Syne, sans-serif' }}>CommandEditor</span>
+            <a href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+               className="flex items-center gap-3 group" aria-label="CommandEditor — back to top">
+              <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105">
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-full h-full">
+              <defs><linearGradient id="ceGradNav" x1="3" y1="3" x2="37" y2="37" gradientUnits="userSpaceOnUse"><stop stopColor="#3B82F6"/><stop offset="1" stopColor="#2563EB"/></linearGradient></defs>
+              <rect x="1" y="1" width="38" height="38" rx="11" fill="url(#ceGradNav)"/>
+              <path d="M26.5 14.2 C 22.5 10.8, 15.5 11.8, 13.4 16.8 C 11.3 21.8, 14.6 27.4, 20 27.6 C 24.2 27.8, 27.4 24.6, 26.6 20.6 C 26.1 18.1, 23.4 16.8, 21.3 18" stroke="white" strokeWidth="3.1" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <circle cx="26.9" cy="14.4" r="2.15" fill="white"/>
+            </svg>
+              </div>
+              <span className="font-bold text-lg tracking-tight text-white transition-opacity group-hover:opacity-80" style={{ fontFamily: 'Syne, sans-serif' }}>CommandEditor</span>
+            </a>
             <span className="badge text-xs" style={{ background: 'rgba(96,165,250,0.15)', color: 'var(--blue-glow)', fontSize: '10px' }}>v8</span>
           </div>
           <div className="flex items-center gap-2">
@@ -1119,19 +1124,23 @@ export default function Home() {
       {/* ===== FOOTER ===== */}
       <footer style={{ background: 'var(--navy)', borderTop: '1px solid rgba(255,255,255,0.08)' }} className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                 style={{ background: 'linear-gradient(135deg, var(--blue-bright), var(--blue-vivid))' }}>
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+          <a href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+             className="flex items-center gap-3 group" aria-label="CommandEditor — back to top">
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105">
+            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-full h-full">
+              <defs><linearGradient id="ceGradNav" x1="3" y1="3" x2="37" y2="37" gradientUnits="userSpaceOnUse"><stop stopColor="#3B82F6"/><stop offset="1" stopColor="#2563EB"/></linearGradient></defs>
+              <rect x="1" y="1" width="38" height="38" rx="11" fill="url(#ceGradNav)"/>
+              <path d="M26.5 14.2 C 22.5 10.8, 15.5 11.8, 13.4 16.8 C 11.3 21.8, 14.6 27.4, 20 27.6 C 24.2 27.8, 27.4 24.6, 26.6 20.6 C 26.1 18.1, 23.4 16.8, 21.3 18" stroke="white" strokeWidth="3.1" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <circle cx="26.9" cy="14.4" r="2.15" fill="white"/>
+            </svg>
             </div>
-            <span className="font-bold text-white" style={{ fontFamily: 'Syne, sans-serif' }}>CommandEditor</span>
-          </div>
-          <div className="flex flex-wrap gap-6 text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
-            <span>Privacy-first document processing</span>
+            <span className="font-bold text-white transition-opacity group-hover:opacity-80" style={{ fontFamily: 'Syne, sans-serif' }}>CommandEditor</span>
+          </a>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <a href="/privacy" className="transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.55)' }}>Privacy</a>
+            <a href="/terms" className="transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.55)' }}>Terms of Service</a>
             <span>·</span>
-            <span>All processing runs in your browser</span>
+            <span>Zero uploads — all processing in your browser</span>
             <span>·</span>
             <span>© 2026 CommandEditor</span>
           </div>
