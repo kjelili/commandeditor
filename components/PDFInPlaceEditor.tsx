@@ -62,21 +62,32 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
       const page = await pdf.getPage(i + 1);
       const viewport = page.getViewport({ scale: SCALE });
       const textContent = await page.getTextContent();
+      // pdf.js resolves each run's CSS family (e.g. "serif"/"sans-serif" or the
+      // real family) in textContent.styles — our signal for matching the font.
+      const styles: any = (textContent as any).styles || {};
 
-      const textItems: PDFTextItem[] = textContent.items.map((item: any, idx: number) => ({
-        text: item.str,
-        x: item.transform[4] * SCALE,
-        y: viewport.height - (item.transform[5] * SCALE), // PDF coords are bottom-up
-        width: item.width * SCALE,
-        height: item.height * SCALE,
-        fontName: item.fontName,
-        fontSize: item.height * SCALE,
-        pageIndex: i,
-        transform: item.transform,
-        hasEOL: item.hasEOL,
-        dir: item.dir,
-        id: `text_${i}_${idx}`,
-      }));
+      const textItems: PDFTextItem[] = textContent.items.map((item: any, idx: number) => {
+        const fam: string = styles[item.fontName]?.fontFamily || '';
+        const isSerif = /serif/i.test(fam) && !/sans/i.test(fam);
+        const isBold = /bold|black|heavy|semibold/i.test(item.fontName) || /bold/i.test(fam);
+        return {
+          text: item.str,
+          x: item.transform[4] * SCALE,
+          y: viewport.height - (item.transform[5] * SCALE), // PDF coords are bottom-up
+          width: item.width * SCALE,
+          height: item.height * SCALE,
+          fontName: item.fontName,
+          fontSize: item.height * SCALE,
+          pageIndex: i,
+          transform: item.transform,
+          hasEOL: item.hasEOL,
+          dir: item.dir,
+          isSerif,
+          isBold,
+          cssFontFamily: fam,
+          id: `text_${i}_${idx}`,
+        };
+      });
 
       pageData.push({
         width: viewport.width,
@@ -200,20 +211,25 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
         editsByPage.set(edit.pageIndex, existing);
       });
 
-      // Embed Lato (regular + bold) — a lighter, cleaner sans that matches
-      // typical document body text far better than the heavy built-in Helvetica.
-      // Falls back to Helvetica if the font files can't be fetched.
-      let helv: any, helvBold: any;
+      // Match the document's style: sans-serif runs get Lato, serif runs get
+      // Tinos (metric-compatible with Times New Roman), each in regular/bold.
+      // Falls back to the built-in Helvetica/Times if the TTFs can't be fetched.
+      const grab = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error('font'); return r.arrayBuffer(); });
+      let sans: any, sansBold: any, serif: any, serifBold: any;
       try {
-        const [reg, bold] = await Promise.all([
-          fetch('/fonts/Lato-Regular.ttf').then(r => { if (!r.ok) throw new Error('font'); return r.arrayBuffer(); }),
-          fetch('/fonts/Lato-Bold.ttf').then(r => { if (!r.ok) throw new Error('font'); return r.arrayBuffer(); }),
+        const [lr, lb, tr, tb] = await Promise.all([
+          grab('/fonts/Lato-Regular.ttf'), grab('/fonts/Lato-Bold.ttf'),
+          grab('/fonts/Tinos-Regular.ttf'), grab('/fonts/Tinos-Bold.ttf'),
         ]);
-        helv = await pdfDoc.embedFont(reg, { subset: true });
-        helvBold = await pdfDoc.embedFont(bold, { subset: true });
+        sans = await pdfDoc.embedFont(lr, { subset: true });
+        sansBold = await pdfDoc.embedFont(lb, { subset: true });
+        serif = await pdfDoc.embedFont(tr, { subset: true });
+        serifBold = await pdfDoc.embedFont(tb, { subset: true });
       } catch {
-        helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        sans = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        sansBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        serif = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+        serifBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
       }
       // Helvetica is WinAnsi-only; map the common smart punctuation so edits
       // with curly quotes / dashes don't throw during draw.
@@ -229,8 +245,8 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
           // Real glyph size = vertical scale of the text transform (more accurate
           // than pdf.js item.height, which caused oversized/misplaced edits).
           const fontSize = Math.hypot(item.transform[1], item.transform[3]) || (item.fontSize / SCALE);
-          const isBold = /bold/i.test(item.fontName);
-          const font = isBold ? helvBold : helv;
+          const isBold = item.isBold ?? /bold/i.test(item.fontName);
+          const font = item.isSerif ? (isBold ? serifBold : serif) : (isBold ? sansBold : sans);
           const baseline = item.transform[5];
           const originalWidth = item.width / SCALE;
 

@@ -17,6 +17,9 @@ export interface PDFTextItem {
   transform: number[]; // PDF transform matrix [a,b,c,d,e,f]
   hasEOL: boolean;
   dir: string;
+  isSerif?: boolean;
+  isBold?: boolean;
+  cssFontFamily?: string;
 }
 
 export interface TextEditOperation {
