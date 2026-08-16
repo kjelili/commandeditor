@@ -138,6 +138,26 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     }
   };
 
+  // Turns a fetch Response into a validated file. If the provider returned an
+  // error, or a non-PDF body masquerading as a .pdf (e.g. a Drive API
+  // "not enabled" JSON), surface a clear message instead of loading garbage.
+  const deliverDownloadedFile = async (res: Response, name: string, providerLabel: string) => {
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.text()).slice(0, 300); } catch {}
+      throw new Error(`${providerLabel} returned ${res.status}. ${detail}`);
+    }
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (name.toLowerCase().endsWith('.pdf')) {
+      const header = new TextDecoder().decode(bytes.slice(0, 5));
+      if (header !== '%PDF-') {
+        const preview = new TextDecoder().decode(bytes.slice(0, 200));
+        throw new Error(`${providerLabel} didn't return a PDF — usually the provider's file API isn't enabled or authorised. Response starts: ${preview}`);
+      }
+    }
+    onFileSelect(bytes, name);
+  };
+
   const downloadFromGoogleDrive = async (fileId: string, name: string) => {
     const auth = authStates.google_drive;
     if (!auth) return;
@@ -145,16 +165,13 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
         { headers: { Authorization: `Bearer ${auth.accessToken}` } }
       );
-
-      const blob = await response.blob();
-      const arrayBuffer = await blob.arrayBuffer();
-      onFileSelect(new Uint8Array(arrayBuffer), name);
-    } catch (error) {
+      await deliverDownloadedFile(response, name, 'Google Drive');
+    } catch (error: any) {
       console.error('Download failed:', error);
-      alert('Failed to download file');
+      alert(error.message || 'Failed to download file');
     } finally {
       setIsLoading(false);
     }
@@ -347,11 +364,10 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
       const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${fileId}/content`, {
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       });
-      const arrayBuffer = await (await res.blob()).arrayBuffer();
-      onFileSelect(new Uint8Array(arrayBuffer), name);
-    } catch (error) {
+      await deliverDownloadedFile(res, name, 'OneDrive');
+    } catch (error: any) {
       console.error('OneDrive download failed:', error);
-      alert('Failed to download file');
+      alert(error.message || 'Failed to download file');
     } finally {
       setIsLoading(false);
     }
@@ -370,13 +386,10 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
           'Dropbox-API-Arg': JSON.stringify({ path }),
         },
       });
-
-      const blob = await response.blob();
-      const arrayBuffer = await blob.arrayBuffer();
-      onFileSelect(new Uint8Array(arrayBuffer), name);
-    } catch (error) {
+      await deliverDownloadedFile(response, name, 'Dropbox');
+    } catch (error: any) {
       console.error('Download failed:', error);
-      alert('Failed to download file');
+      alert(error.message || 'Failed to download file');
     } finally {
       setIsLoading(false);
     }
