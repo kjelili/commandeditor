@@ -42,6 +42,8 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(1);
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  const mainCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pdfDocRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Load PDF and extract text items
@@ -53,6 +55,7 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
     // Copy the bytes for pdf.js — it transfers/detaches the buffer to its
     // worker, which would otherwise leave pdfBytes empty for the pdf-lib save.
     const pdf = await pdfjs.getDocument({ data: pdfBytes.slice() }).promise;
+    pdfDocRef.current = pdf;
     const pageData: Array<{ width: number; height: number; textItems: PDFTextItem[] }> = [];
 
     for (let i = 0; i < pdf.numPages; i++) {
@@ -80,21 +83,48 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
         height: viewport.height,
         textItems,
       });
-
-      // Render page to canvas
-      setTimeout(() => {
-        const canvas = canvasRefs.current[i];
-        if (canvas) {
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext('2d')!;
-          page.render({ canvasContext: ctx, viewport }).promise;
-        }
-      }, 0);
     }
 
     setPages(pageData);
   };
+
+  // Render the current page onto the main canvas once it's mounted.
+  useEffect(() => {
+    const pdf = pdfDocRef.current;
+    if (!pdf || !pages.length) return;
+    let cancelled = false;
+    (async () => {
+      const page = await pdf.getPage(currentPage + 1);
+      const viewport = page.getViewport({ scale: SCALE });
+      const canvas = mainCanvasRef.current;
+      if (!canvas || cancelled) return;
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) await page.render({ canvasContext: ctx, viewport }).promise;
+    })();
+    return () => { cancelled = true; };
+  }, [pages, currentPage]);
+
+  // Render small thumbnails for the sidebar.
+  useEffect(() => {
+    const pdf = pdfDocRef.current;
+    if (!pdf || !pages.length) return;
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < pages.length; i++) {
+        const page = await pdf.getPage(i + 1);
+        const viewport = page.getViewport({ scale: 0.32 });
+        const canvas = canvasRefs.current[i];
+        if (!canvas || cancelled) continue;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) await page.render({ canvasContext: ctx, viewport }).promise;
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [pages]);
 
   const handleTextClick = (item: PDFTextItem) => {
     // Check if already edited
@@ -318,11 +348,7 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
             >
               <canvas
                 ref={el => { canvasRefs.current[idx] = el; }}
-                style={{ 
-                  width: '100%', 
-                  height: 'auto',
-                  display: idx === currentPage ? 'none' : 'block'
-                }}
+                style={{ width: '100%', height: 'auto', borderRadius: '3px' }}
               />
               <div>Page {idx + 1}</div>
               {pages[idx]?.textItems.some(t => 
@@ -355,13 +381,7 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
             }}>
               {/* Background canvas */}
               <canvas
-                ref={el => { 
-                  if (el && !canvasRefs.current[currentPage]) {
-                    canvasRefs.current[currentPage] = el;
-                    // Re-render when ref is set
-                    setTimeout(() => loadPDF(), 0);
-                  }
-                }}
+                ref={mainCanvasRef}
                 width={pages[currentPage].width}
                 height={pages[currentPage].height}
                 style={{
