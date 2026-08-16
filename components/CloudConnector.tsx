@@ -201,7 +201,12 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
       const view = new g.picker.DocsView(g.picker.ViewId.DOCS)
         .setMimeTypes('application/pdf')
         .setMode(g.picker.DocsViewMode.LIST);
-      const picker = new g.picker.PickerBuilder()
+      // The App ID is the Cloud project number — the numeric prefix of the OAuth
+      // client ID (e.g. "123456-abc.apps.googleusercontent.com"). Setting it is
+      // what lets the picker grant this token drive.file access to picked files;
+      // without it, downloads 404. Derived automatically, no extra config.
+      const appId = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '').split('-')[0];
+      let builder = new g.picker.PickerBuilder()
         .addView(view)
         .setOAuthToken(auth.accessToken)
         .setDeveloperKey(apiKey)
@@ -212,8 +217,9 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
             const doc = data.docs[0];
             downloadFromGoogleDrive(doc.id, doc.name);
           }
-        })
-        .build();
+        });
+      if (appId && /^\d+$/.test(appId)) builder = builder.setAppId(appId);
+      const picker = builder.build();
       picker.setVisible(true);
     } catch (e: any) {
       console.error('Picker error:', e);
