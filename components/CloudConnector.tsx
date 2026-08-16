@@ -285,7 +285,12 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     const redirectUri = `${window.location.origin}/api/auth/onedrive/callback`;
     const scope = 'files.readwrite';
 
-    const url = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +
+    // Use the /consumers endpoint so sign-in is scoped to personal Microsoft
+    // accounts (personal OneDrive). This avoids AADSTS700016 when a user is
+    // signed into an org tenant (e.g. a university) that doesn't have the app.
+    // If org/work OneDrive is needed later, register the app as multi-tenant
+    // and switch this back to /common.
+    const url = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?` +
       `client_id=${clientId}&` +
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
       `response_type=token&` +
