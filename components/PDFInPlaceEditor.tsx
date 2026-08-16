@@ -185,6 +185,12 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
     setIsProcessing(true);
     try {
       const pdfDoc = await PDFDocument.load(pdfBytes);
+      // Register fontkit so we can embed a real TTF (lighter than the built-in
+      // Helvetica, which otherwise makes edits look bolder than the body text).
+      try {
+        const fontkit = (await import('@pdf-lib/fontkit')).default;
+        pdfDoc.registerFontkit(fontkit as any);
+      } catch {}
 
       // Group edits by page
       const editsByPage = new Map<number, TextEditOperation[]>();
@@ -194,9 +200,21 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
         editsByPage.set(edit.pageIndex, existing);
       });
 
-      // Embed both weights once so edits can match bold vs regular text.
-      const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      // Embed Lato (regular + bold) — a lighter, cleaner sans that matches
+      // typical document body text far better than the heavy built-in Helvetica.
+      // Falls back to Helvetica if the font files can't be fetched.
+      let helv: any, helvBold: any;
+      try {
+        const [reg, bold] = await Promise.all([
+          fetch('/fonts/Lato-Regular.ttf').then(r => { if (!r.ok) throw new Error('font'); return r.arrayBuffer(); }),
+          fetch('/fonts/Lato-Bold.ttf').then(r => { if (!r.ok) throw new Error('font'); return r.arrayBuffer(); }),
+        ]);
+        helv = await pdfDoc.embedFont(reg, { subset: true });
+        helvBold = await pdfDoc.embedFont(bold, { subset: true });
+      } catch {
+        helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      }
       // Helvetica is WinAnsi-only; map the common smart punctuation so edits
       // with curly quotes / dashes don't throw during draw.
       const sanitize = (t: string) => t
