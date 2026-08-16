@@ -164,34 +164,51 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
         editsByPage.set(edit.pageIndex, existing);
       });
 
-      // Apply edits page by page
+      // Embed both weights once so edits can match bold vs regular text.
+      const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      // Helvetica is WinAnsi-only; map the common smart punctuation so edits
+      // with curly quotes / dashes don't throw during draw.
+      const sanitize = (t: string) => t
+        .replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2013\u2014]/g, '-').replace(/\u2026/g, '...').replace(/\u00A0/g, ' ');
+
       for (const [pageIndex, edits] of editsByPage) {
         const page = pdfDoc.getPage(pageIndex);
-        const { width, height } = page.getSize();
 
         for (const edit of edits) {
-          // Find and remove original text
-          // Note: pdf-lib doesn't have direct text editing, so we draw over with white
-          // and add new text. For production, use a more sophisticated approach.
-
           const item = edit.textItem;
-          // Draw white rectangle over original text
+          // Real glyph size = vertical scale of the text transform (more accurate
+          // than pdf.js item.height, which caused oversized/misplaced edits).
+          const fontSize = Math.hypot(item.transform[1], item.transform[3]) || (item.fontSize / SCALE);
+          const isBold = /bold/i.test(item.fontName);
+          const font = isBold ? helvBold : helv;
+          const baseline = item.transform[5];
+          const originalWidth = item.width / SCALE;
+
+          // White out the original glyphs (baseline − descent up to ascent).
           page.drawRectangle({
-            x: item.transform[4],
-            y: item.transform[5] - (item.transform[3] * 0.2), // slight adjustment
-            width: item.width / SCALE + 2,
-            height: item.height / SCALE + 2,
+            x: item.transform[4] - 1,
+            y: baseline - fontSize * 0.25,
+            width: originalWidth + 2,
+            height: fontSize * 1.18,
             color: rgb(1, 1, 1),
           });
 
-          // Draw new text
-          page.drawText(edit.newText, {
-            x: item.transform[4],
-            y: item.transform[5],
-            size: item.fontSize / SCALE,
-            font: await pdfDoc.embedFont(StandardFonts.Helvetica),
-            color: rgb(0, 0, 0),
-          });
+          // Redraw the edited text on the same baseline at the matched size.
+          try {
+            page.drawText(sanitize(edit.newText), {
+              x: item.transform[4],
+              y: baseline,
+              size: fontSize,
+              font,
+              color: rgb(0, 0, 0),
+            });
+          } catch (e) {
+            page.drawText(sanitize(edit.newText).replace(/[^\x20-\x7E]/g, ''), {
+              x: item.transform[4], y: baseline, size: fontSize, font, color: rgb(0, 0, 0),
+            });
+          }
         }
       }
 
@@ -371,18 +388,25 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
                       minWidth: item.width,
                       minHeight: item.height,
                       fontSize: item.fontSize,
-                      fontFamily: item.fontName.includes('Bold') || item.fontName.includes('bold') 
-                        ? 'Helvetica-Bold, sans-serif' 
+                      fontFamily: item.fontName.includes('Bold') || item.fontName.includes('bold')
+                        ? 'Helvetica-Bold, sans-serif'
                         : 'Helvetica, Arial, sans-serif',
-                      lineHeight: '1.2',
+                      lineHeight: 1,
                       cursor: isEditing ? 'text' : 'pointer',
-                      background: isEditing ? '#fef3c7' : edited ? '#dbeafe' : 'transparent',
-                      border: isEditing ? '2px solid #f59e0b' : edited ? '1px solid #3b82f6' : '1px solid transparent',
+                      // Only paint a background when editing this item or previewing
+                      // an edit; otherwise stay fully transparent so the crisp
+                      // canvas text underneath shows through (no double/ghost text).
+                      background: isEditing ? '#fff' : edited ? '#fff' : 'transparent',
+                      outline: isEditing ? '2px solid #f59e0b' : edited ? '1px solid #3b82f6' : 'none',
                       borderRadius: '2px',
-                      padding: '1px 2px',
+                      padding: 0,
                       whiteSpace: 'pre',
-                      zIndex: isEditing ? 100 : 10,
+                      overflow: 'visible',
+                      transition: 'background 0.1s',
+                      zIndex: isEditing ? 100 : edited ? 20 : 10,
                     }}
+                    onMouseEnter={e => { if (!isEditing && !edited) (e.currentTarget as HTMLElement).style.background = 'rgba(37,99,235,0.12)' }}
+                    onMouseLeave={e => { if (!isEditing && !edited) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                   >
                     {isEditing ? (
                       <textarea
@@ -404,9 +428,7 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
                         }}
                       />
                     ) : (
-                      <span style={{ 
-                        color: edited ? '#2563eb' : 'inherit',
-                      }}>
+                      <span style={{ color: edited ? '#111827' : 'transparent' }}>
                         {getEditedText(item)}
                       </span>
                     )}
