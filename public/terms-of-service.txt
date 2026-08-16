@@ -57,8 +57,7 @@ the Service.
    updated Terms, indicated by the "Last updated" date above.
 
 9. CONTACT
-   Questions about these Terms can be sent to the project maintainer via the
-   repository at https://github.com/kjelili/commandeditor.
+   Questions about these Terms can be sent to us at hello@commandeditor.com.
 
 This document is provided for transparency and does not constitute legal
 advice.

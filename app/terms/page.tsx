@@ -32,7 +32,7 @@ export default function TermsPage() {
       <H>8. Changes to the Service and Terms</H>
       <p>We may modify or discontinue the Service, or update these Terms, at any time. Continued use after changes take effect constitutes acceptance of the updated Terms, indicated by the &quot;Last updated&quot; date above.</p>
       <H>9. Contact</H>
-      <p>Questions about these Terms can be sent to the project maintainer via the repository at <a href="https://github.com/kjelili/commandeditor" className="underline" style={{ color: '#2563EB' }}>github.com/kjelili/commandeditor</a>.</p>
+      <p>Questions about these Terms can be sent to us at <a href="mailto:hello@commandeditor.com" className="underline" style={{ color: '#2563EB' }}>hello@commandeditor.com</a>.</p>
       <p className="text-sm pt-4" style={{ color: 'var(--ink-muted, #64748b)' }}>This document is provided for transparency and does not constitute legal advice.</p>
     </LegalPage>
   )

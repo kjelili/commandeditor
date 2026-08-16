@@ -54,8 +54,7 @@ means in practice and the few places where data does leave your browser.
    reflected by the "Last updated" date above.
 
 9. CONTACT
-   Questions about this policy can be sent to the project maintainer via the
-   repository at https://github.com/kjelili/commandeditor.
+   Questions about this policy can be sent to us at hello@commandeditor.com.
 
 This document is provided for transparency and does not constitute legal
 advice.

@@ -32,7 +32,7 @@ export default function PrivacyPage() {
       <H>8. Changes</H>
       <p>We may update this policy as the product evolves. Material changes will be reflected by the &quot;Last updated&quot; date above.</p>
       <H>9. Contact</H>
-      <p>Questions about this policy can be sent to the project maintainer via the repository at <a href="https://github.com/kjelili/commandeditor" className="underline" style={{ color: '#2563EB' }}>github.com/kjelili/commandeditor</a>.</p>
+      <p>Questions about this policy can be sent to us at <a href="mailto:hello@commandeditor.com" className="underline" style={{ color: '#2563EB' }}>hello@commandeditor.com</a>.</p>
       <p className="text-sm pt-4" style={{ color: 'var(--ink-muted, #64748b)' }}>This document is provided for transparency and does not constitute legal advice.</p>
     </LegalPage>
   )
