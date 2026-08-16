@@ -188,6 +188,8 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
         .addView(view)
         .setOAuthToken(auth.accessToken)
         .setDeveloperKey(apiKey)
+        .setOrigin(window.location.protocol + '//' + window.location.host)
+        .setTitle('Select a PDF from Google Drive')
         .setCallback((data: any) => {
           if (data.action === g.picker.Action.PICKED && data.docs?.length) {
             const doc = data.docs[0];
@@ -515,7 +517,7 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
                   <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
                     For your privacy, Google only shares files you explicitly choose. Click below to pick PDFs from your Drive.
                   </p>
-                  <button onClick={openGooglePicker} style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: 'white', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+                  <button type="button" onClick={openGooglePicker} style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: 'white', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
                     📂 Browse Google Drive…
                   </button>
                 </div>
