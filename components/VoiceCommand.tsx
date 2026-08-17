@@ -123,7 +123,7 @@ export type VoiceCommandType = {
         | 'toneanalyse' | 'langdetect' | 'citations' | 'fontinspect'
         | 'bates' | 'custody' | 'attachments' | 'deduppages' | 'a11yfix' | 'listen'
         | 'epub' | 'summarize' | 'translate' | 'watchfolder' | 'netaudit' | 'policy'
-        | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics'
+        | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -445,6 +445,8 @@ const COMMAND_MAP: Array<{
     keywords: /(redline|track changes|negotiat|propose (a |an )?(change|edit)|counter-?offer|markup mode|contract changes)/i },
   { action: 'deadlineics' as any, label: 'Deadlines to Calendar', emoji: '📅',
     keywords: /(deadline|due date|calendar|ics|add to calendar|extract dates|important dates|court date)/i },
+  { action: 'alttext' as any, label: 'AI Alt-Text', emoji: '🖼',
+    keywords: /(alt-? ?text|alternative text|caption.*image|image.*caption|screen reader|describe images)/i },
 
   // BATCH RULES
   { action: 'batchrules' as any, label: 'Batch Rules', emoji: '⚙️',
