@@ -11,7 +11,8 @@
  *   npx commandeditor info input.pdf
  *
  * Everything runs locally — files never leave the machine (same promise as
- * the web app). Requires Node 18+. Depends only on pdf-lib.
+ * the web app). Requires Node 18+. Uses pdf-lib; the notarize commands also
+ * use the OpenTimestamps library (npm i opentimestamps).
  */
 
 const fs = require('fs')
@@ -30,6 +31,9 @@ Commands:
   compress <in.pdf> -o out.pdf                Rebuild with object streams, wipe metadata
   hash <in.pdf>                               SHA-256 fingerprint
   info <in.pdf>                               Pages, size, metadata
+  notarize <in.pdf> [-o proof.ots]            Anchor SHA-256 to Bitcoin (OpenTimestamps)
+  upgrade <proof.ots>                         Attach the Bitcoin proof once confirmed
+  verify <in.pdf> <proof.ots>                 Verify a proof against a file
 
 Options:
   -o, --output <path>     Output file (default: <name>-<command>.pdf)
@@ -40,6 +44,14 @@ Options:
 
 function fail(msg) { console.error(`✗ ${msg}`); process.exit(1) }
 function ok(msg) { console.log(`✓ ${msg}`) }
+
+// The notarize commands use the real OpenTimestamps library. It's Node-only
+// (depends on request/bitcore-lib) so it isn't bundled into the web app — the
+// CLI is where full stamp/upgrade/verify runs correctly.
+function requireOts() {
+  try { return require('opentimestamps') }
+  catch { fail('The notarize commands need the OpenTimestamps library:\n\n    npm i opentimestamps\n') }
+}
 
 // pdf-lib standard fonts encode WinAnsi only — drawing anything else throws
 // at save time. Map common typography, degrade the rest visibly but safely.
@@ -203,6 +215,53 @@ async function main() {
       console.log(`Author:   ${doc.getAuthor() || '—'}`)
       console.log(`Created:  ${doc.getCreationDate()?.toISOString() || '—'}`)
       console.log(`Modified: ${doc.getModificationDate()?.toISOString() || '—'}`)
+      break
+    }
+    case 'notarize': {
+      if (!files[0]) fail('notarize needs an input PDF')
+      const ots = requireOts()
+      const { DetachedTimestampFile, Ops } = ots
+      const detached = DetachedTimestampFile.fromBytes(new Ops.OpSHA256(), readPdf(files[0]))
+      console.log('✓ Submitting SHA-256 to the OpenTimestamps calendars (only the 32-byte hash leaves this machine)…')
+      await ots.stamp(detached)
+      const outPath = flags.output || (files[0] + '.ots')
+      fs.writeFileSync(outPath, Buffer.from(detached.serializeToBytes()))
+      ok(`Anchored → ${outPath}`)
+      console.log(`  Pending until a Bitcoin block confirms it (usually 1–12h). Then run:`)
+      console.log(`    commandeditor upgrade ${outPath}`)
+      break
+    }
+    case 'upgrade': {
+      const otsPath = files[0]
+      if (!otsPath) fail('upgrade needs a .ots proof file')
+      const ots = requireOts()
+      const detached = ots.DetachedTimestampFile.deserialize(new Uint8Array(fs.readFileSync(otsPath)))
+      const changed = await ots.upgrade(detached)
+      if (changed) {
+        fs.writeFileSync(otsPath, Buffer.from(detached.serializeToBytes()))
+        ok(`Confirmed on-chain — Bitcoin attestation written to ${otsPath}`)
+      } else {
+        ok('Still pending — no Bitcoin block has aggregated it yet. Try again later.')
+      }
+      break
+    }
+    case 'verify': {
+      if (!files[0] || !files[1]) fail('verify needs: <in.pdf> <proof.ots>')
+      const ots = requireOts()
+      const { DetachedTimestampFile, Ops } = ots
+      const detachedOts = DetachedTimestampFile.deserialize(new Uint8Array(fs.readFileSync(files[1])))
+      const detachedOriginal = DetachedTimestampFile.fromBytes(new Ops.OpSHA256(), readPdf(files[0]))
+      let result
+      try { result = await ots.verify(detachedOts, detachedOriginal) }
+      catch (e) { fail(e.message || String(e)) }
+      if (result && Object.keys(result).length) {
+        for (const [chain, att] of Object.entries(result)) {
+          const when = att && att.timestamp ? new Date(att.timestamp * 1000).toISOString() : '(time unknown)'
+          ok(`${chain}: this file existed by ${when}${att && att.height ? ' (block ' + att.height + ')' : ''}`)
+        }
+      } else {
+        ok('Proof matches the file, but it isn\'t confirmed on-chain yet (pending). Run "upgrade" later.')
+      }
       break
     }
     default:

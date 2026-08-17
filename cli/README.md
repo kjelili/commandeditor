@@ -39,3 +39,20 @@ done
 ```
 
 (The web app's **Watch Folder** tool does the same in-browser, no shell needed.)
+
+
+## Notarization (OpenTimestamps)
+
+Anchor a document's SHA-256 into the Bitcoin blockchain — only the hash leaves
+your machine. These commands use the real OpenTimestamps library, which is
+Node-only, so install it once:
+
+    npm i opentimestamps
+
+Then:
+
+    commandeditor notarize contract.pdf            # writes contract.pdf.ots (pending)
+    commandeditor upgrade contract.pdf.ots         # attach the Bitcoin proof once confirmed (hours later)
+    commandeditor verify contract.pdf contract.pdf.ots
+
+The .ots is a standard OpenTimestamps proof — it also verifies at opentimestamps.org.

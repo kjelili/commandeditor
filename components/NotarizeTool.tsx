@@ -139,7 +139,9 @@ export default function NotarizeTool({ file, showStatus, onClose }: Props) {
 
         <p style={{ fontSize: 11, color: 'var(--ink-soft)', margin: 0 }}>
           🔒 Only the 32-byte hash is sent to public OpenTimestamps calendars — no document content, no metadata about you.
-          Anyone can later verify the proof independently against the Bitcoin blockchain.
+          The downloaded .ots is a standard OpenTimestamps proof: verify or upgrade it independently at{' '}
+          <a href="https://opentimestamps.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent, #2563eb)' }}>opentimestamps.org</a>,
+          or with the CLI — <code style={{ fontSize: 10 }}>commandeditor verify file.pdf file.pdf.ots</code>.
         </p>
       </div>
     </div>
