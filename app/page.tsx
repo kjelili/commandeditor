@@ -508,7 +508,7 @@ export default function Home() {
       // v10 flexibility pack
       'epub','summarize','translate','watchfolder','netaudit','policy',
       // v11 moat pack
-      'collab','formfill','multidoc','timetravel','redline']
+      'collab','formfill','multidoc','timetravel','redline','deadlineics']
     if (v6Tools.includes(command.action)) { handleToolSelect(command.action); return }
     if (uploadedFiles.length === 0) { showStatus('Upload a file first'); return }
     const toolTrigger = (window as any).__triggerToolAction
