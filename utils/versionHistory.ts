@@ -108,7 +108,13 @@ export async function diffSnapshotsText(a: ArrayBuffer, b: ArrayBuffer): Promise
     return lines
   }
 
-  const [la, lb] = await Promise.all([extract(a.slice(0)), extract(b.slice(0))])
+  const [laFull, lbFull] = await Promise.all([extract(a.slice(0)), extract(b.slice(0))])
+
+  // LCS is O(n·m) in memory — cap line counts so huge documents degrade to a
+  // prefix diff instead of exhausting the browser tab.
+  const MAX_LINES = 1500
+  const la = laFull.slice(0, MAX_LINES)
+  const lb = lbFull.slice(0, MAX_LINES)
 
   // Simple LCS diff
   const n = la.length, m = lb.length
@@ -126,5 +132,7 @@ export async function diffSnapshotsText(a: ArrayBuffer, b: ArrayBuffer): Promise
   }
   while (i < n) out.push({ kind: 'removed', text: la[i++] })
   while (j < m) out.push({ kind: 'added', text: lb[j++] })
+  if (laFull.length > MAX_LINES || lbFull.length > MAX_LINES)
+    out.push({ kind: 'added', text: `… diff truncated to the first ${MAX_LINES} text lines (document too large) …` })
   return out
 }

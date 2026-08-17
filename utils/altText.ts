@@ -1,3 +1,5 @@
+import { toWinAnsi } from '@/utils/pdfTextSafe'
+
 // ─── ON-DEVICE AI ALT-TEXT ─────────────────────────────────────────────────
 // Accessibility gap: most PDFs have images with no alternative text, making
 // them unreadable to screen readers. This extracts embedded images, captions
@@ -118,7 +120,7 @@ export async function stampAltText(file: File, images: PdfImage[]): Promise<Uint
     if (!page) continue
     let y = page.getHeight() - 12
     for (const img of imgs) {
-      page.drawText(`[Image: ${img.caption.slice(0, 200)}]`, {
+      page.drawText(toWinAnsi(`[Image: ${img.caption.slice(0, 200)}]`), {
         x: 8, y, size: 6, font,
         color: rgb(1, 1, 1), opacity: 0, // invisible to the eye, present to readers
       })

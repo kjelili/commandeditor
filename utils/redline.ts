@@ -5,6 +5,8 @@
 // the proposed text beside it). This is the Word "Track Changes" workflow
 // that PDF tools never offer — it lives here, on-device.
 
+import { toWinAnsi } from '@/utils/pdfTextSafe'
+
 export interface RedlineChange {
   id: string
   page: number            // 1-based; 0 = auto-detect first page containing the text
@@ -74,14 +76,14 @@ export async function applyRedlines(
     if (mode === 'clean') {
       // white-out original, write replacement
       page.drawRectangle({ x: hit.x - 1, y: hit.y - size * 0.25, width: hit.w + 2, height: size * 1.3, color: rgb(1, 1, 1) })
-      page.drawText(c.proposed, { x: hit.x, y: hit.y, size, font: helv, color: rgb(0, 0, 0) })
+      page.drawText(toWinAnsi(c.proposed), { x: hit.x, y: hit.y, size, font: helv, color: rgb(0, 0, 0) })
     } else {
       // redline: strikethrough original, red proposal above/beside
       const yMid = hit.y + size * 0.35
       page.drawLine({ start: { x: hit.x, y: yMid }, end: { x: hit.x + hit.w, y: yMid }, thickness: 1, color: rgb(0.86, 0.15, 0.15) })
-      page.drawText(c.proposed, { x: hit.x, y: hit.y + size * 1.35, size, font: helvBold, color: rgb(0.86, 0.15, 0.15) })
+      page.drawText(toWinAnsi(c.proposed), { x: hit.x, y: hit.y + size * 1.35, size, font: helvBold, color: rgb(0.86, 0.15, 0.15) })
       if (c.note) {
-        page.drawText(`[${c.note.slice(0, 80)}]`, { x: hit.x, y: hit.y - size * 1.2, size: Math.max(6, size - 3), font: helv, color: rgb(0.5, 0.1, 0.1) })
+        page.drawText(toWinAnsi(`[${c.note.slice(0, 80)}]`), { x: hit.x, y: hit.y - size * 1.2, size: Math.max(6, size - 3), font: helv, color: rgb(0.5, 0.1, 0.1) })
       }
     }
   }

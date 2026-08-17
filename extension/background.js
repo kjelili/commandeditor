@@ -29,10 +29,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.tabs.create({
       url: 'https://commandeditor.com/?import=' + encodeURIComponent(info.linkUrl),
     });
-  } else if (info.menuItemId === MENU_ID && info.pageUrl && info.pageUrl.toLowerCase().endsWith('.pdf')) {
+  } else if (info.menuItemId === MENU_ID && info.pageUrl && info.pageUrl.toLowerCase().split('?')[0].endsWith('.pdf')) {
     chrome.tabs.create({
       url: 'https://commandeditor.com/?import=' + encodeURIComponent(info.pageUrl),
     });
+  } else if (info.menuItemId === MENU_ID) {
+    // Clicked on a non-PDF page — just open the toolkit
+    chrome.tabs.create({ url: 'https://commandeditor.com/' });
   } else if (info.menuItemId === 'ce-open-page' && tab && tab.url) {
     // Send the user to Print-to-PDF with the page URL pre-noted
     chrome.tabs.create({

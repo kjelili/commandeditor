@@ -95,7 +95,9 @@ export async function detectFormFields(file: File): Promise<DetectedField[]> {
             const x = pts[pi++], y = pts[pi++], w = pts[pi++], h = pts[pi++]
             if (w > 0 && h > 0) rects.push({ x, y, w, h })
           }
-          else { pi += 6 } // curves consume 6 points; conservative skip
+          else if (op === OPS.curveTo) { pi += 6 }
+          else if (op === OPS.curveTo2 || op === OPS.curveTo3) { pi += 4 }
+          else { pi += 6 } // unknown op — conservative skip
         }
       }
     }

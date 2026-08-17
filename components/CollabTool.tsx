@@ -103,9 +103,9 @@ export default function CollabTool({ file, showStatus, onClose }: Props) {
       room.onPeerJoin(() => {
         setPeers(p => p + 1)
         showStatus('🤝 A reviewer joined')
-        // Late joiners get the full pin list from us
+        // Late joiners get the full pin list from us (functional setState
+        // gives us the current list, not a stale closure)
         setPins(cur => { try { actionsRef.current.sendPresence?.(cur) } catch {} ; return cur })
-        try { actionsRef.current.sendPresence?.(pins) } catch {}
       })
       room.onPeerLeave(() => {
         setPeers(p => Math.max(0, p - 1))

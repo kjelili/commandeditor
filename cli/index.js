@@ -41,6 +41,20 @@ Options:
 function fail(msg) { console.error(`✗ ${msg}`); process.exit(1) }
 function ok(msg) { console.log(`✓ ${msg}`) }
 
+// pdf-lib standard fonts encode WinAnsi only — drawing anything else throws
+// at save time. Map common typography, degrade the rest visibly but safely.
+function toWinAnsi(s) {
+  const rep = { '\u2018': "'", '\u2019': "'", '\u201C': '"', '\u201D': '"', '\u2013': '-', '\u2014': '--', '\u2026': '...', '\u2022': '*', '\u2192': '->', '\u20AC': 'EUR', '\u00A9': '(c)', '\u00AE': '(r)', '\u2122': '(tm)', '\u00A0': ' ' }
+  let out = ''
+  for (const ch of String(s)) {
+    const c = ch.codePointAt(0)
+    if (rep[ch] !== undefined) out += rep[ch]
+    else if ((c >= 0x20 && c <= 0x7e) || (c >= 0xa1 && c <= 0xff)) out += ch
+    else out += '?'
+  }
+  return out
+}
+
 function parseArgs(argv) {
   const args = { _: [], flags: {} }
   for (let i = 0; i < argv.length; i++) {
@@ -139,7 +153,7 @@ async function main() {
     }
     case 'watermark': {
       if (!files[0]) fail('watermark needs an input PDF')
-      const text = flags.text || 'CONFIDENTIAL'
+      const text = toWinAnsi(flags.text || 'CONFIDENTIAL')
       const doc = await PDFDocument.load(readPdf(files[0]), { ignoreEncryption: true })
       const font = await doc.embedFont(StandardFonts.HelveticaBold)
       for (const p of doc.getPages()) {

@@ -1,3 +1,5 @@
+import { toWinAnsi } from '@/utils/pdfTextSafe'
+
 // ─── DYSLEXIA / LOW-VISION REFLOW ──────────────────────────────────────────
 // PDF's fixed layout is a wall for readers with dyslexia or low vision.
 // This extracts the text and rebuilds the document under the reader's own
@@ -70,7 +72,10 @@ export async function buildReflowedPdf(pagesText: string[], opts: ReflowOptions)
   let y = opts.pageHeight - opts.margin
 
   for (const pageText of pagesText) {
-    for (const paragraph of pageText.split('\n')) {
+    for (const rawParagraph of pageText.split('\n')) {
+      // Sanitize BEFORE width measurement — widthOfTextAtSize also throws on
+      // characters outside the standard font's charset.
+      const paragraph = toWinAnsi(rawParagraph)
       if (!paragraph.trim()) { y -= lineAdvance * 0.5; continue }
       for (const line of wrapLine(paragraph, font, opts.fontSize, maxWidth, opts.wordSpacing)) {
         if (y < opts.margin) {
