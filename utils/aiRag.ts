@@ -113,6 +113,7 @@ export class DocumentIntelligence {
   private vectorStore = new VectorStore();
   private chatPipeline: any = null;
   private documentHash: string = '';
+  private fullText: string = '';
   private isReady = false;
 
   async initialize(): Promise<void> {
@@ -131,6 +132,7 @@ export class DocumentIntelligence {
 
   async loadDocument(textByPage: string[], fileName: string): Promise<void> {
     if (!this.isReady) await this.initialize();
+    this.fullText = textByPage.join('\n');
 
     // Generate document hash for caching
     const encoder = new TextEncoder();
@@ -230,6 +232,10 @@ export class DocumentIntelligence {
   async query(question: string): Promise<AIQueryResult> {
     if (!this.isReady) await this.initialize();
 
+    // Answer contact/link questions precisely instead of dumping passages.
+    const direct = this.tryDirectExtraction(question);
+    if (direct) return { answer: direct, relevantChunks: [], confidence: 1, processingTime: 0 };
+
     const startTime = performance.now();
 
     // Embed the question
@@ -273,6 +279,40 @@ export class DocumentIntelligence {
     return dot / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
+  // Pull exact values (links, email, phone) straight from the document for
+  // targeted questions, so e.g. "github link" returns the link (or an honest
+  // "not found") rather than the whole document.
+  private tryDirectExtraction(question: string): string | null {
+    const q = question.toLowerCase();
+    const text = this.fullText || '';
+    const uniq = (a: string[]) => Array.from(new Set(a.map(x => x.replace(/[.,;)]+$/, '').trim()))).filter(Boolean);
+    const urls = uniq(Array.from(text.matchAll(/\b((?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s)]*)?)/gi)).map(m => m[1]));
+    const emails = uniq(Array.from(text.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)).map(m => m[0]));
+    const emailDomains = new Set(emails.map(e => e.split('@')[1]?.toLowerCase()));
+    const realLinks = urls.filter(u => /^https?:\/\//i.test(u) || /^www\./i.test(u) || u.includes('/') ||
+      /(github|linkedin|twitter|x\.com|behance|dribbble|gitlab|medium|youtube|facebook|instagram)\./i.test(u));
+    const phones = uniq(Array.from(text.matchAll(/\+?\(?\d[\d\s().-]{7,}\d/g)).map(m => m[0]));
+    const has = (...kw: string[]) => kw.some(k => q.includes(k));
+
+    const site = (name: string, re: RegExp) => {
+      const hit = realLinks.filter(u => re.test(u));
+      if (hit.length) return `${name}: ${hit.join(', ')}`;
+      return `I couldn't find a ${name} link in this document.` +
+        (realLinks.length ? ` The links it does contain are: ${realLinks.slice(0, 6).join(', ')}.` : '');
+    };
+
+    if (has('github')) return site('GitHub', /github\.com/i);
+    if (has('linkedin')) return site('LinkedIn', /linkedin\.com/i);
+    if (has('twitter') || q.includes('x profile')) return site('Twitter/X', /(twitter\.com|x\.com)/i);
+    if (has('email', 'e-mail')) return emails.length ? `Email: ${emails.join(', ')}` : "I couldn't find an email address in this document.";
+    if (has('phone', 'mobile', 'telephone', 'contact number', 'call')) return phones.length ? `Phone: ${phones.slice(0, 3).join(', ')}` : "I couldn't find a phone number in this document.";
+    if (has('link', 'url', 'website', 'profile', 'portfolio')) {
+      const list = realLinks.filter(u => !emailDomains.has(u.toLowerCase())).slice(0, 8);
+      return list.length ? `Links found in the document:\n${list.join('\n')}` : "I couldn't find any links in this document.";
+    }
+    return null;
+  }
+
   private async generateAnswer(question: string, context: string): Promise<string> {
     // For now, use a template-based approach with the context
     // In production, load tinyllama for generation
@@ -304,22 +344,26 @@ Answer:`;
   }
 
   private fallbackAnswer(question: string, context: string): string {
-    // Smart fallback: extract relevant sentences
-    const sentences = context.split(/\n/).filter(s => s.trim());
-    const keywords = question.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    // Split into sentences (not whole chunks) so answers are focused snippets.
+    const clean = context.replace(/\[Page \d+\]: /g, ' ');
+    const sentences = (clean.match(/[^.!?\n]+[.!?]?/g) || [])
+      .map(s => s.trim()).filter(s => s.length > 15);
+    const stop = new Set(['what', 'where', 'which', 'show', 'tell', 'about', 'does', 'this', 'that', 'with', 'from', 'have', 'their', 'them', 'they', 'document']);
+    const keywords = question.toLowerCase().split(/\s+/).filter(w => w.length > 3 && !stop.has(w));
 
-    const scored = sentences.map(s => {
-      const lower = s.toLowerCase();
+    const scored = sentences.map(sentence => {
+      const lower = sentence.toLowerCase();
       const score = keywords.reduce((acc, kw) => acc + (lower.includes(kw) ? 1 : 0), 0);
-      return { sentence: s, score };
-    });
+      return { sentence, score };
+    }).filter(s => s.score > 0);
 
     scored.sort((a, b) => b.score - a.score);
-    const best = scored.slice(0, 3).map(s => s.sentence.replace(/^\[Page \d+\]: /, ''));
+    const best = scored.slice(0, 2).map(s => s.sentence);
 
-    if (best.length === 0) return "I couldn't find relevant information in the document.";
-
-    return `Based on the document:\n\n${best.join('\n\n')}`;
+    if (best.length === 0) {
+      return "I couldn't find that specifically in this document. Try rephrasing, or ask for a summary.";
+    }
+    return best.join('\n\n');
   }
 
   async summarize(pages?: number[]): Promise<string> {
