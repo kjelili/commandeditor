@@ -552,7 +552,7 @@ export default function Home() {
               </div>
               <span className="font-bold text-lg tracking-tight text-white transition-opacity group-hover:opacity-80" style={{ fontFamily: 'Syne, sans-serif' }}>CommandEditor</span>
             </a>
-            <span className="badge text-xs" style={{ background: 'rgba(96,165,250,0.15)', color: 'var(--blue-glow)', fontSize: '10px' }}>v10</span>
+            <span className="badge text-xs" style={{ background: 'rgba(96,165,250,0.15)', color: 'var(--blue-glow)', fontSize: '10px' }}>v11</span>
           </div>
           <div className="flex items-center gap-2">
             <PWAInstaller />
@@ -694,7 +694,7 @@ export default function Home() {
       <section className="border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center mb-14">
-            <p className="section-label mb-3">New in v9 &amp; v10</p>
+            <p className="section-label mb-3">New in v11 — the moat release</p>
             <h2 className="text-4xl md:text-5xl mb-4">Beyond the basics.</h2>
             <p className="text-base max-w-2xl mx-auto" style={{ color: 'var(--ink-muted)' }}>
               Capabilities you won&apos;t find in other free, in-browser PDF tools — every one runs
