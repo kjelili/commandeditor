@@ -34,6 +34,7 @@ const PrintToPDFTool = dynamic(() => import('@/components/PrintToPDFTool'), { ss
 const TimeLockTool = dynamic(() => import('@/components/TimeLockTool'), { ssr: false })
 const PWAInstaller = dynamic(() => import('@/components/PWAInstaller'), { ssr: false })
 const MobileQuickBar = dynamic(() => import('@/components/MobileQuickBar'), { ssr: false })
+const VersionTravelTool = dynamic(() => import('@/components/VersionTravelTool'), { ssr: false })
 
 // Maps each tool to a descriptive filename suffix, so a compressed file
 // downloads as "report-compressed.pdf" rather than a vague "report-edited.pdf".
@@ -342,6 +343,17 @@ export default function Home() {
         }])
         setLastCompletedTool(op)
       }
+      // v11: version time-travel — auto-snapshot every completed operation
+      try {
+        const src = uploadedFiles[0]
+        if (src && op) {
+          result.arrayBuffer().then(async buf => {
+            const vh = await import('@/utils/versionHistory')
+            const key = await vh.docFingerprint(src)
+            vh.saveSnapshot(key, buf, op)
+          })
+        }
+      } catch { /* snapshots must never break the main flow */ }
     }
   }
 
@@ -496,7 +508,7 @@ export default function Home() {
       // v10 flexibility pack
       'epub','summarize','translate','watchfolder','netaudit','policy',
       // v11 moat pack
-      'collab','formfill','multidoc']
+      'collab','formfill','multidoc','timetravel']
     if (v6Tools.includes(command.action)) { handleToolSelect(command.action); return }
     if (uploadedFiles.length === 0) { showStatus('Upload a file first'); return }
     const toolTrigger = (window as any).__triggerToolAction
@@ -887,6 +899,14 @@ export default function Home() {
               />
             )}
           </div>
+        )}
+
+        {/* ── v11: Version Time-Travel ── */}
+        {selectedTool === 'timetravel' && uploadedFiles[0] && (
+          <VersionTravelTool file={uploadedFiles[0]} current={processedFile}
+            onRestore={(blob: Blob, label: string) => handleProcessingComplete(blob, label)}
+            showStatus={showStatus}
+            onClose={() => handleToolSelect('')} />
         )}
 
         {/* ── v8 Modules pack tools ── */}
