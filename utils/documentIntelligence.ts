@@ -338,7 +338,7 @@ export async function estimateInkCoverage(
   onProgress?: (p: number, t: number) => void
 ): Promise<InkEstimate> {
   const pdfjsLib = await import('pdfjs-dist')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
   const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
   const perPage: number[] = []
   

@@ -58,8 +58,8 @@ export default function PDFViewer({
   const initPdfjs = useCallback(async () => {
     const pdfjsLib = await import('pdfjs-dist');
     if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
-      try { await fetch('https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs', { method: 'HEAD' }) }
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      try { await fetch('/pdf.worker.min.mjs', { method: 'HEAD' }) }
       catch { pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs` }
     }
     return pdfjsLib;

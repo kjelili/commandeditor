@@ -24,7 +24,7 @@ export async function extractTextLayers(
   onProgress?: (page: number, total: number) => void
 ): Promise<PageTextLayer[]> {
   const pdfjsLib = await import('pdfjs-dist')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
   const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
   const layers: PageTextLayer[] = []

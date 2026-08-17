@@ -36,7 +36,7 @@ export default function ProfilerBanner({ file, onSelectTool }: Props) {
     ;(async () => {
       try {
         const pdfjsLib = await import('pdfjs-dist')
-        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
         const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
         const profiler = new DocumentProfiler()
         const analysis = await profiler.analyze(doc)

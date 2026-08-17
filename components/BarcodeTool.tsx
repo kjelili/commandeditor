@@ -67,7 +67,7 @@ export default function BarcodeTool({ file, onComplete, onClose, showStatus }: P
     setBusy(true)
     try {
       const pdfjsLib = await import('pdfjs-dist')
-      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
       const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
       const found: Array<{ page: number; data: string }> = []
       for (let i = 1; i <= doc.numPages; i++) {

@@ -32,6 +32,7 @@ const ContractClausesTool = dynamic(() => import('@/components/ContractClausesTo
 const FingerprintTool = dynamic(() => import('@/components/FingerprintTool'), { ssr: false })
 const PrintToPDFTool = dynamic(() => import('@/components/PrintToPDFTool'), { ssr: false })
 const TimeLockTool = dynamic(() => import('@/components/TimeLockTool'), { ssr: false })
+const PWAInstaller = dynamic(() => import('@/components/PWAInstaller'), { ssr: false })
 
 // Maps each tool to a descriptive filename suffix, so a compressed file
 // downloads as "report-compressed.pdf" rather than a vague "report-edited.pdf".
@@ -298,7 +299,7 @@ export default function Home() {
     ;(async () => {
       try {
         const pdfjsLib = await import('pdfjs-dist')
-        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
         const pdf = await pdfjsLib.getDocument({ data: await pdfFile.arrayBuffer() }).promise
         const texts: string[] = []
         for (let i = 1; i <= pdf.numPages; i++) {
@@ -375,6 +376,13 @@ export default function Home() {
       } else showStatus('No processed file to download yet')
       return
     }
+    if (command.action === 'install') {
+      if (pwaPrompt) {
+        pwaPrompt.prompt()
+        pwaPrompt.userChoice.then(({ outcome }: any) => { if (outcome === 'accepted') setPwaPrompt(null) })
+      } else showStatus('Install from the banner when it appears, or your browser menu')
+      return
+    }
     if (command.action === 'redact') { handleToolSelect('redact'); return }
     if (command.action === 'crop') { handleToolSelect('crop'); return }
     if (command.action === 'totext') { handleToolSelect('totext'); return }
@@ -401,12 +409,14 @@ export default function Home() {
       'bookmarks','autocrop','tojson','fontinspect','spellcheck','batchrules','macro',
       'semanticgroup','podcastscript','ankideck','tilePrint','emailhtml','tamperseal',
       'recipe','preflight','microannot','normalizesize','present','inkestimate',
-      'timeline','toneanalyse','langdetect','citations']
+      'timeline','toneanalyse','langdetect','citations',
+      // v9 gap-filler pack
+      'bates','custody','attachments','deduppages','a11yfix','listen']
     if (v6Tools.includes(command.action)) { handleToolSelect(command.action); return }
     if (uploadedFiles.length === 0) { showStatus('Upload a file first'); return }
     const toolTrigger = (window as any).__triggerToolAction
     if (toolTrigger) toolTrigger(command.action, command.format)
-  }, [uploadedFiles, showStatus])
+  }, [uploadedFiles, showStatus, pwaPrompt])
 
   const scrollToApp = () => document.getElementById('app-section')?.scrollIntoView({ behavior: 'smooth' })
 
@@ -445,9 +455,10 @@ export default function Home() {
               </div>
               <span className="font-bold text-lg tracking-tight text-white transition-opacity group-hover:opacity-80" style={{ fontFamily: 'Syne, sans-serif' }}>CommandEditor</span>
             </a>
-            <span className="badge text-xs" style={{ background: 'rgba(96,165,250,0.15)', color: 'var(--blue-glow)', fontSize: '10px' }}>v8</span>
+            <span className="badge text-xs" style={{ background: 'rgba(96,165,250,0.15)', color: 'var(--blue-glow)', fontSize: '10px' }}>v9</span>
           </div>
           <div className="flex items-center gap-2">
+            <PWAInstaller />
             <span className="badge hidden sm:inline-flex" style={{ background: 'rgba(5,150,105,0.15)', color: '#34d399' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
               100% Private
@@ -532,7 +543,7 @@ export default function Home() {
             </h1>
             <p className="text-lg md:text-xl mb-10 max-w-xl animate-fade-up"
                style={{ color: 'rgba(255,255,255,0.75)', animationDelay: '0.16s', lineHeight: 1.7 }}>
-              70+ tools in one private toolkit — now with an on-device AI assistant, cryptographic
+              80+ tools in one private toolkit — now with an on-device AI assistant, cryptographic
               e-signatures, document fingerprinting, and 50+ hands-free voice commands.
               Everything runs in your browser. Your documents never touch a server.
             </p>
@@ -549,7 +560,7 @@ export default function Home() {
               </button>
             </div>
             <div className="flex flex-wrap gap-10 mt-16 animate-fade-up" style={{ animationDelay: '0.32s' }}>
-              {[{ val: '70+', label: 'PDF tools' }, { val: '50+', label: 'Voice commands' }, { val: '0', label: 'Server uploads' }, { val: '∞', label: 'File size limit' }].map(s => (
+              {[{ val: '80+', label: 'PDF tools' }, { val: '50+', label: 'Voice commands' }, { val: '0', label: 'Server uploads' }, { val: '∞', label: 'File size limit' }].map(s => (
                 <div key={s.label}>
                   <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'Syne, sans-serif', background: 'linear-gradient(90deg, white, var(--blue-glow))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{s.val}</div>
                   <div className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{s.label}</div>
@@ -586,7 +597,7 @@ export default function Home() {
       <section className="border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center mb-14">
-            <p className="section-label mb-3">New in v8</p>
+            <p className="section-label mb-3">New in v9</p>
             <h2 className="text-4xl md:text-5xl mb-4">Beyond the basics.</h2>
             <p className="text-base max-w-2xl mx-auto" style={{ color: 'var(--ink-muted)' }}>
               Capabilities you won&apos;t find in other free, in-browser PDF tools — every one runs
@@ -596,11 +607,14 @@ export default function Home() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { icon: '🤖', title: 'On-device AI assistant', desc: 'Ask questions about any document and get answers with page sources. Runs entirely in your browser — no API, no data sent anywhere.' },
-              { icon: '🖋', title: 'Cryptographic e-signatures', desc: 'Multi-party signing with ECDSA P-256 and a downloadable certificate. Court-admissible, and free — no per-envelope fees.' },
-              { icon: '🫆', title: 'Document fingerprinting', desc: 'Issue per-recipient traceable copies, then identify who leaked a document with the built-in verifier.' },
-              { icon: '⏳', title: 'Time-locked documents', desc: 'Encrypt files into portable bundles with a password, availability window, and open limit — AES-256 all the way.' },
-              { icon: '⚖️', title: 'Legal & financial extraction', desc: 'Pull case-law citations, contract clauses with risk flags, and invoice line items — no cloud, no upload.' },
-              { icon: '🔌', title: 'Plugin SDK', desc: 'Extend CommandEditor with your own tools and commands. Plugins run in your browser under the same zero-knowledge guarantee.' },
+              { icon: '🎧', title: 'Listen to PDF', desc: 'Audiobook mode: any document read aloud with per-page chapters, speed control and voice picker — on-device speech, no cloud TTS.' },
+              { icon: '⚖️', title: 'Bates numbering', desc: 'Stamp sequential legal identifiers (ACME-000042…) across every page. The e-discovery standard, free — lawyers usually pay Acrobat for this.' },
+              { icon: '⛓', title: 'Chain-of-custody log', desc: 'Tamper-evident, hash-chained record of who did what to a document. Any alteration breaks the chain — with one-click verification.' },
+              { icon: '📎', title: 'Attachment extractor', desc: 'Pull files embedded inside a PDF — portfolios, email archives, evidence bundles — individually or as a zip.' },
+              { icon: '👯', title: 'Duplicate page finder', desc: 'Perceptual hashing catches rescanned and near-identical pages, then strips them. Cleans up scanned archives in one click.' },
+              { icon: '🛠', title: 'Accessibility auto-fixer', desc: 'Most tools audit accessibility; this one repairs it — title, language and metadata fixed automatically.' },
+              { icon: '📴', title: 'True offline mode', desc: 'A real service worker caches the whole toolkit, including the PDF engine. Install it and every tool works with no connection at all.' },
+              { icon: '⌨️', title: 'Typed commands everywhere', desc: 'Voice needs Chrome/Edge — so the full command brain (synonyms, fuzzy matching) now works typed, in every browser.' },
             ].map((f, i) => (
               <div key={f.title} className="card animate-fade-up" style={{ animationDelay: `${i * 0.08}s` }}>
                 <div className="text-2xl mb-3">{f.icon}</div>
@@ -1007,7 +1021,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <p className="section-label mb-3">Everything included</p>
-            <h2 className="text-4xl md:text-5xl mb-4">70+ tools. Zero cost.</h2>
+            <h2 className="text-4xl md:text-5xl mb-4">80+ tools. Zero cost.</h2>
             <p className="text-base max-w-xl mx-auto" style={{ color: 'var(--ink-muted)' }}>
               Every tool runs entirely in your browser. No sign-up, no subscriptions, no limits.
             </p>

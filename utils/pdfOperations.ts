@@ -7,7 +7,7 @@ let _pdfjsReady = false
 async function getPdfjs() {
   const lib = await import('pdfjs-dist')
   if (!_pdfjsReady) {
-    lib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+    lib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
     _pdfjsReady = true
   }
   return lib

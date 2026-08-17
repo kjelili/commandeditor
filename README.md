@@ -1,3 +1,15 @@
+# CommandEditor v9
+
+> **New in v9 — the gap-filler release:**
+> - 📴 **True offline mode** — a real service worker now caches the entire toolkit, and the pdf.js engine ships locally instead of from a CDN. Install the app and every single tool works with zero connection.
+> - ⌨️ **Typed commands in every browser** — voice recognition needs Chrome/Edge, but the full command brain (synonym map + fuzzy scoring) now accepts typed input, so Safari/Firefox/mobile users get the same 60+ commands.
+> - 🎧 **Listen to PDF** — audiobook mode with per-page chapters, speed control and voice picker. On-device speech synthesis; no cloud TTS, no privacy break.
+> - ⚖️ **Bates numbering** — sequential legal page stamping (`ACME-000042…`), the e-discovery standard, free.
+> - ⛓ **Chain-of-custody log** — tamper-evident, hash-chained record appended to the document; one-click chain verification.
+> - 📎 **Embedded attachment extractor** — pull files hidden inside PDFs (portfolios, email archives), individually or zipped.
+> - 👯 **Duplicate page finder** — perceptual hashing detects rescanned/near-identical pages and strips them in one click.
+> - 🛠 **Accessibility auto-fixer** — repairs title, language and metadata instead of just auditing.
+
 # CommandEditor v6
 
 > **The first voice-controlled PDF toolkit. 50+ hands-free commands. 50+ tools. Zero servers. Every byte stays on your device.**

@@ -27,7 +27,7 @@ export default function CitationExtractorTool({ file, onClose, showStatus }: Pro
     setBusy(true)
     try {
       const pdfjsLib = await import('pdfjs-dist')
-      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
       const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
       const results = await new CitationExtractor().extract(doc)
       setCites(results)

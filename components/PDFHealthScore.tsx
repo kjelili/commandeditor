@@ -29,7 +29,7 @@ export default function PDFHealthScore({ file, onSuggestTools }: Props) {
       try {
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc)
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
         const buf = await file.arrayBuffer()
         const pdf = await pdfjsLib.getDocument({ data: buf }).promise
         if (cancelled) return

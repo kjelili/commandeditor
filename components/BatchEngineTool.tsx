@@ -82,7 +82,7 @@ export default function BatchEngineTool({ files, onClose, showStatus }: Props) {
     try {
       const engine = await getEngine()
       const pdfjsLib = await import('pdfjs-dist')
-      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
       const JSZip = (await import('jszip')).default
       const zip = new JSZip()
       let outputs = 0

@@ -24,6 +24,12 @@ import {
   removePasswordPDF, addHeaderFooterPDF, grayscalePDF, insertPagePDF,
   deletePagesFromPDF, splitByNPages, pdfToPPTX, sha256File, ocrPDF
 } from '@/utils/pdfOperations'
+import {
+  batesNumberPDF, appendCustodyEntry, verifyCustodyChain,
+  extractEmbeddedAttachments, findDuplicatePages, removePagesPDF,
+  autoFixAccessibility, BatesOptions, CustodyEntry, AttachmentInfo, DupeGroup, A11yFixReport
+} from '@/utils/gapFillers'
+import ListenTool from '@/components/ListenTool'
 
 interface PDFToolsProps {
   files: File[]
@@ -120,6 +126,13 @@ const TOOLS = [
   { id: 'fingerprint', name: 'Fingerprint', fullName: 'Document Fingerprinting', emoji:'🫆', desc:'Traceable copies',      requiresPDF:true,  color:'#1c1917',colorLight:'#f5f5f4' },
   { id: 'printpdf',    name: 'Print→PDF',   fullName: 'Print to PDF',            emoji:'🖨', desc:'Text/HTML via print',   requiresPDF:false, color:'#0891b2',colorLight:'#cffafe' },
   { id: 'timelock',    name: 'Time Lock',   fullName: 'Time-Locked Documents',   emoji:'⏳', desc:'Expiring encrypted files',requiresPDF:false,color:'#7c3aed',colorLight:'#ede9fe' },
+  // ── v9 GAP-FILLER PACK ──────────────────────────────────────────────────
+  { id: 'bates',       name: 'Bates No.',   fullName: 'Bates Numbering',          emoji:'⚖️', desc:'Legal page stamping',   requiresPDF:true,  color:'#1c1917',colorLight:'#f5f5f4' },
+  { id: 'custody',     name: 'Custody',     fullName: 'Chain-of-Custody Log',     emoji:'⛓', desc:'Tamper-evident audit',  requiresPDF:true,  color:'#0369a1',colorLight:'#e0f2fe' },
+  { id: 'attachments', name: 'Attachments', fullName: 'Embedded Attachment Extractor',emoji:'📎',desc:'Pull embedded files', requiresPDF:true,  color:'#0d9488',colorLight:'#ccfbf1' },
+  { id: 'deduppages',  name: 'De-dupe',     fullName: 'Duplicate Page Finder',    emoji:'👯', desc:'Find & strip dupes',    requiresPDF:true,  color:'#b45309',colorLight:'#fef3c7' },
+  { id: 'a11yfix',     name: 'A11y Fix',    fullName: 'Accessibility Auto-Fixer', emoji:'🛠', desc:'Repair, not just audit', requiresPDF:true, color:'#059669',colorLight:'#d1fae5' },
+  { id: 'listen',      name: 'Listen',      fullName: 'Listen to PDF (Audiobook)',emoji:'🎧', desc:'On-device read-aloud',  requiresPDF:true,  color:'#7c3aed',colorLight:'#ede9fe' },
 ]
 
 export default function PDFTools({
@@ -267,6 +280,26 @@ export default function PDFTools({
   // Poster/Tile print
   const [tileCols, setTileCols] = useState(2)
   const [tileRows, setTileRows] = useState(2)
+  // ── v9 GAP-FILLER STATE ─────────────────────────────────────────────────
+  // Bates Numbering
+  const [batesPrefix, setBatesPrefix] = useState('DOC-')
+  const [batesStart, setBatesStart] = useState(1)
+  const [batesDigits, setBatesDigits] = useState(6)
+  const [batesPos, setBatesPos] = useState<BatesOptions['position']>('bottom-right')
+  // Chain of Custody
+  const [custodyActor, setCustodyActor] = useState('')
+  const [custodyAction, setCustodyAction] = useState('Reviewed')
+  const [custodyEntry, setCustodyEntry] = useState<CustodyEntry | null>(null)
+  const [custodyVerify, setCustodyVerify] = useState<{ valid: boolean; entries: number; breakAt: number } | null>(null)
+  // Attachments
+  const [attachList, setAttachList] = useState<AttachmentInfo[] | null>(null)
+  const [attachLoading, setAttachLoading] = useState(false)
+  // Duplicate pages
+  const [dupeGroups, setDupeGroups] = useState<DupeGroup[] | null>(null)
+  const [dupeLoading, setDupeLoading] = useState(false)
+  // Accessibility auto-fix
+  const [a11yFixReport, setA11yFixReport] = useState<A11yFixReport | null>(null)
+  const [a11yFixLoading, setA11yFixLoading] = useState(false)
   const [tilePage, setTilePage] = useState(1)
   // Email HTML
   const [emailHtmlResult, setEmailHtmlResult] = useState<string|null>(null)
@@ -380,7 +413,7 @@ export default function PDFTools({
   // Helper: extract text by page using pdfjs
   const extractTextByPage = async (file: File): Promise<Array<{page:number;text:string}>> => {
     const pdfjsLib = await import('pdfjs-dist')
-    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
     const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
     const pages: Array<{page:number;text:string}> = []
     for (let i = 1; i <= pdf.numPages; i++) {
@@ -395,7 +428,7 @@ export default function PDFTools({
   // Helper: render PDF pages to images
   const renderPDFToImages = async (file: File, scale = 1.2): Promise<string[]> => {
     const pdfjsLib = await import('pdfjs-dist')
-    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
     const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
     const images: string[] = []
     for (let i = 1; i <= pdf.numPages; i++) {
@@ -609,7 +642,7 @@ export default function PDFTools({
       setA11yLoading(true); onToolSelect('a11ycheck')
       try {
         const pdfjsLib = await import('pdfjs-dist')
-        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
         const pdf = await pdfjsLib.getDocument({ data: await pdfFiles[0].arrayBuffer() }).promise
         const checks: Array<{id:string;label:string;pass:boolean;detail:string;severity:'critical'|'warning'|'info'}> = []
         // Check 1: Text layer present
@@ -860,6 +893,74 @@ export default function PDFTools({
       setLangLoading(false); return
     }
 
+    // ── v9 GAP-FILLER CASES ───────────────────────────────────────────────
+    if (toolId === 'bates') {
+      if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      onProcessingStart()
+      try {
+        const blob = await batesNumberPDF(pdfFiles[0], {
+          prefix: batesPrefix, start: batesStart, digits: batesDigits,
+          position: batesPos, fontSize: 10,
+        })
+        pushUndo(blob); onProcessingComplete(blob, toolId)
+        showStatus(`✓ Bates numbers stamped from ${batesPrefix}${String(batesStart).padStart(batesDigits, '0')}`)
+      } catch (e: any) { showStatus('Bates numbering failed: ' + e.message); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'custody') {
+      if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      if (!custodyActor.trim()) { showStatus('Enter your name (actor) first'); return }
+      onProcessingStart()
+      try {
+        const { blob, entry } = await appendCustodyEntry(pdfFiles[0], custodyActor.trim(), custodyAction)
+        setCustodyEntry(entry)
+        onProcessingComplete(blob, toolId)
+        showStatus('✓ Custody entry appended — hash-chained and tamper-evident')
+      } catch (e: any) { showStatus('Custody log failed: ' + e.message); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'attachments') {
+      if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      setAttachLoading(true); onToolSelect('attachments')
+      try {
+        const atts = await extractEmbeddedAttachments(pdfFiles[0])
+        setAttachList(atts)
+        if (atts.length === 0) showStatus('No embedded attachments found')
+        else showStatus(`✓ Found ${atts.length} embedded attachment${atts.length !== 1 ? 's' : ''}`)
+      } catch (e: any) { showStatus('Attachment scan failed: ' + e.message) }
+      setAttachLoading(false); return
+    }
+
+    if (toolId === 'deduppages') {
+      if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      setDupeLoading(true); onToolSelect('deduppages')
+      try {
+        const groups = await findDuplicatePages(pdfFiles[0], 6)
+        setDupeGroups(groups)
+        showStatus(groups.length ? `Found ${groups.length} duplicate group${groups.length !== 1 ? 's' : ''}` : '✓ No duplicate pages — document is clean')
+      } catch (e: any) { showStatus('Duplicate scan failed: ' + e.message) }
+      setDupeLoading(false); return
+    }
+
+    if (toolId === 'a11yfix') {
+      if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      setA11yFixLoading(true); onToolSelect('a11yfix')
+      try {
+        const { blob, report } = await autoFixAccessibility(pdfFiles[0])
+        setA11yFixReport(report)
+        pushUndo(blob); onProcessingComplete(blob, toolId)
+        showStatus(`✓ ${report.fixes.length} accessibility fix${report.fixes.length !== 1 ? 'es' : ''} applied`)
+      } catch (e: any) { showStatus('Auto-fix failed: ' + e.message); onProcessingComplete(new Blob()) }
+      setA11yFixLoading(false); return
+    }
+
+    if (toolId === 'listen') {
+      if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      onToolSelect('listen'); return
+    }
+
     if (toolId === 'citations') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
       setCitationLoading(true); onToolSelect('citations')
@@ -901,7 +1002,7 @@ export default function PDFTools({
       try {
         // Render first page and detect content bounds
         const pdfjsLib = await import('pdfjs-dist')
-        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
         const pdf = await pdfjsLib.getDocument({ data: await pdfFiles[0].arrayBuffer() }).promise
         const page = await pdf.getPage(1)
         const vp = page.getViewport({ scale: 0.5 })
@@ -1085,7 +1186,7 @@ export default function PDFTools({
         // Extract text layer per page, detect tabular patterns, export as CSV
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc)
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
         const pdf = await pdfjsLib.getDocument({ data: await pdfFiles[0].arrayBuffer() }).promise
         const rows: string[][] = []
         for (let i = 1; i <= pdf.numPages; i++) {
@@ -1452,7 +1553,7 @@ export default function PDFTools({
       try {
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc)
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
         const pdf = await pdfjsLib.getDocument({ data: await pdfFiles[0].arrayBuffer() }).promise
         const page = await pdf.getPage(Math.min(drawPageNum, pdf.numPages))
         const vp = page.getViewport({ scale: 1.5 })
@@ -2484,7 +2585,7 @@ export default function PDFTools({
             showStatus('Checking for text layer beneath black regions…', 5000)
             try {
               const pdfjsLib = await import('pdfjs-dist')
-              if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+              if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
               const buf = await pdfF.arrayBuffer()
               const pdf = await pdfjsLib.getDocument({ data: buf }).promise
               let foundText = false
@@ -3754,6 +3855,189 @@ export default function PDFTools({
             </div>
           )}
         </div>
+      )}
+
+      {/* ── v9: BATES NUMBERING ─────────────────────────────────────────── */}
+      {selectedTool === 'bates' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">⚖️</span>
+            <div><p className="font-semibold text-sm">Bates Numbering</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Sequential legal identifiers on every page — e-discovery standard</p></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs block mb-1" style={{color:'var(--ink-muted)'}}>Prefix</label>
+              <input value={batesPrefix} onChange={e => setBatesPrefix(e.target.value)} placeholder="ACME-"
+                     className="w-full text-sm px-3 py-2 rounded-lg" style={{background:'var(--surface)',border:'1px solid var(--border)',color:'var(--ink)'}} />
+            </div>
+            <div>
+              <label className="text-xs block mb-1" style={{color:'var(--ink-muted)'}}>Start number</label>
+              <input type="number" min={1} value={batesStart} onChange={e => setBatesStart(Math.max(1, Number(e.target.value)))}
+                     className="w-full text-sm px-3 py-2 rounded-lg" style={{background:'var(--surface)',border:'1px solid var(--border)',color:'var(--ink)'}} />
+            </div>
+            <div>
+              <label className="text-xs block mb-1" style={{color:'var(--ink-muted)'}}>Digits (zero-padded)</label>
+              <input type="number" min={1} max={10} value={batesDigits} onChange={e => setBatesDigits(Math.min(10, Math.max(1, Number(e.target.value))))}
+                     className="w-full text-sm px-3 py-2 rounded-lg" style={{background:'var(--surface)',border:'1px solid var(--border)',color:'var(--ink)'}} />
+            </div>
+            <div>
+              <label className="text-xs block mb-1" style={{color:'var(--ink-muted)'}}>Position</label>
+              <select value={batesPos} onChange={e => setBatesPos(e.target.value as BatesOptions['position'])}
+                      className="w-full text-sm px-3 py-2 rounded-lg" style={{background:'var(--surface)',border:'1px solid var(--border)',color:'var(--ink)'}}>
+                <option value="bottom-right">Bottom right</option>
+                <option value="bottom-left">Bottom left</option>
+                <option value="top-right">Top right</option>
+                <option value="top-left">Top left</option>
+              </select>
+            </div>
+          </div>
+          <p className="text-xs px-3 py-2 rounded-lg" style={{background:'var(--surface)',color:'var(--ink-muted)'}}>
+            Preview: <span className="font-mono" style={{color:'var(--ink)'}}>{batesPrefix}{String(batesStart).padStart(batesDigits, '0')}</span>
+          </p>
+          <button onClick={() => handleToolAction('bates')} className="btn-primary w-full" style={{background:'#1c1917'}}>
+            ⚖️ Stamp Bates Numbers
+          </button>
+        </div>
+      )}
+
+      {/* ── v9: CHAIN OF CUSTODY ────────────────────────────────────────── */}
+      {selectedTool === 'custody' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">⛓</span>
+            <div><p className="font-semibold text-sm">Chain-of-Custody Log</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Tamper-evident, hash-chained record of who did what — forensic standard</p></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs block mb-1" style={{color:'var(--ink-muted)'}}>Actor (your name)</label>
+              <input value={custodyActor} onChange={e => setCustodyActor(e.target.value)} placeholder="J. Smith"
+                     className="w-full text-sm px-3 py-2 rounded-lg" style={{background:'var(--surface)',border:'1px solid var(--border)',color:'var(--ink)'}} />
+            </div>
+            <div>
+              <label className="text-xs block mb-1" style={{color:'var(--ink-muted)'}}>Action</label>
+              <select value={custodyAction} onChange={e => setCustodyAction(e.target.value)}
+                      className="w-full text-sm px-3 py-2 rounded-lg" style={{background:'var(--surface)',border:'1px solid var(--border)',color:'var(--ink)'}}>
+                {['Received', 'Reviewed', 'Redacted', 'Signed', 'Exported', 'Transferred', 'Sealed'].map(a => <option key={a}>{a}</option>)}
+              </select>
+            </div>
+          </div>
+          <button onClick={() => handleToolAction('custody')} className="btn-primary w-full" style={{background:'#0369a1'}}>
+            ⛓ Append Custody Entry
+          </button>
+          {custodyEntry && (
+            <div className="text-xs space-y-1 px-3 py-2 rounded-xl" style={{background:'var(--green-light)'}}>
+              <p className="font-semibold">✓ Entry #{custodyEntry.entryHash.slice(0, 8)} logged</p>
+              <p style={{color:'var(--ink-muted)'}}>Doc hash <span className="font-mono">{custodyEntry.docHash.slice(0, 16)}…</span> · chained to <span className="font-mono">{custodyEntry.prevHash.slice(0, 16)}…</span></p>
+            </div>
+          )}
+          <button onClick={async () => setCustodyVerify(await verifyCustodyChain())} className="btn-ghost text-xs w-full">
+            🔍 Verify local custody chain
+          </button>
+          {custodyVerify && (
+            <p className="text-xs px-3 py-2 rounded-xl" style={{background: custodyVerify.valid ? 'var(--green-light)' : 'var(--red-light, #fee2e2)', color: custodyVerify.valid ? 'var(--green, #059669)' : '#dc2626'}}>
+              {custodyVerify.valid
+                ? `✓ Chain intact — ${custodyVerify.entries} entr${custodyVerify.entries !== 1 ? 'ies' : 'y'}, no tampering detected`
+                : `⚠ Chain broken at entry ${custodyVerify.breakAt + 1} of ${custodyVerify.entries} — possible tampering`}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── v9: EMBEDDED ATTACHMENTS ────────────────────────────────────── */}
+      {selectedTool === 'attachments' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">📎</span>
+            <div><p className="font-semibold text-sm">Embedded Attachment Extractor</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Pull files hidden inside the PDF — portfolios, email archives, evidence bundles</p></div>
+          </div>
+          <button onClick={() => handleToolAction('attachments')} disabled={attachLoading} className="btn-primary w-full" style={{background:'#0d9488'}}>
+            {attachLoading ? 'Scanning…' : '📎 Scan for Attachments'}
+          </button>
+          {attachList && attachList.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs" style={{color:'var(--ink-muted)'}}>{attachList.length} attachment{attachList.length !== 1 ? 's' : ''}</p>
+                <button onClick={async () => {
+                  const { default: JSZip } = await import('jszip')
+                  const zip = new JSZip()
+                  attachList.forEach(a => zip.file(a.name, a.data))
+                  const blob = await zip.generateAsync({ type: 'blob' })
+                  downloadBlob(blob, 'attachments.zip')
+                }} className="text-xs px-2 py-0.5 rounded-lg" style={{background:'var(--surface)',border:'1px solid var(--border)'}}>⬇ All as .zip</button>
+              </div>
+              {attachList.map((a, i) => (
+                <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs" style={{background:'var(--surface)',border:'1px solid var(--border)'}}>
+                  <span>📄</span><span className="flex-1 truncate">{a.name}</span>
+                  <span style={{color:'var(--ink-muted)'}}>{(a.size / 1024).toFixed(1)} KB</span>
+                  <button onClick={() => downloadBlob(new Blob([a.data as unknown as BlobPart]), a.name)}
+                          className="px-2 py-0.5 rounded-lg" style={{background:'var(--blue-pale)',color:'var(--blue-vivid)'}}>⬇</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {attachList && attachList.length === 0 && (
+            <p className="text-xs text-center py-2" style={{color:'var(--ink-muted)'}}>No embedded files in this PDF</p>
+          )}
+        </div>
+      )}
+
+      {/* ── v9: DUPLICATE PAGE FINDER ───────────────────────────────────── */}
+      {selectedTool === 'deduppages' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">👯</span>
+            <div><p className="font-semibold text-sm">Duplicate Page Finder</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Perceptual hashing finds rescans &amp; near-identical pages — then strips them</p></div>
+          </div>
+          <button onClick={() => handleToolAction('deduppages')} disabled={dupeLoading} className="btn-primary w-full" style={{background:'#b45309'}}>
+            {dupeLoading ? 'Analysing pages…' : '👯 Find Duplicates'}
+          </button>
+          {dupeGroups && dupeGroups.length > 0 && (
+            <div className="space-y-2">
+              {dupeGroups.map((g, i) => (
+                <div key={i} className="px-3 py-2 rounded-xl text-xs" style={{background:'var(--surface)',border:'1px solid var(--border)'}}>
+                  Pages <b>{g.pages.join(', ')}</b> are duplicates — keeping page {g.pages[0]}
+                </div>
+              ))}
+              <button onClick={async () => {
+                onProcessingStart()
+                try {
+                  const toRemove = dupeGroups.flatMap(g => g.pages.slice(1))
+                  const blob = await removePagesPDF(pdfFiles[0], toRemove)
+                  pushUndo(blob); onProcessingComplete(blob, 'deduppages')
+                  showStatus(`✓ Removed ${toRemove.length} duplicate page${toRemove.length !== 1 ? 's' : ''}`)
+                } catch (e: any) { showStatus('Remove failed: ' + e.message); onProcessingComplete(new Blob()) }
+              }} className="btn-primary w-full" style={{background:'#dc2626'}}>
+                🗑 Remove Duplicates (keep first of each set)
+              </button>
+            </div>
+          )}
+          {dupeGroups && dupeGroups.length === 0 && (
+            <p className="text-xs text-center py-2" style={{color:'var(--ink-muted)'}}>✓ No duplicate pages found</p>
+          )}
+        </div>
+      )}
+
+      {/* ── v9: ACCESSIBILITY AUTO-FIXER ────────────────────────────────── */}
+      {selectedTool === 'a11yfix' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">🛠</span>
+            <div><p className="font-semibold text-sm">Accessibility Auto-Fixer</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>The checker audits — this repairs: title, language, metadata</p></div>
+          </div>
+          <button onClick={() => handleToolAction('a11yfix')} disabled={a11yFixLoading} className="btn-primary w-full" style={{background:'#059669'}}>
+            {a11yFixLoading ? 'Repairing…' : '🛠 Auto-Fix Accessibility'}
+          </button>
+          {a11yFixReport && (
+            <div className="space-y-2 text-xs">
+              {a11yFixReport.fixes.map((f, i) => (
+                <div key={i} className="px-3 py-2 rounded-xl" style={{background:'var(--green-light)'}}>✓ {f}</div>
+              ))}
+              {a11yFixReport.skipped.map((s, i) => (
+                <div key={i} className="px-3 py-2 rounded-xl" style={{background:'var(--surface)',color:'var(--ink-muted)'}}>○ {s}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── v9: LISTEN TO PDF ───────────────────────────────────────────── */}
+      {selectedTool === 'listen' && files.length > 0 && hasPDFs && (
+        <ListenTool file={pdfFiles[0]} showStatus={showStatus} onClose={() => onToolSelect('')} />
       )}
 
       {/* ── CITATIONS ─────────────────────────────────────────────────────── */}

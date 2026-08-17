@@ -76,6 +76,18 @@ const COMMAND_REFERENCE: { group: string; emoji: string; items: { say: string; d
       { say: '"cancel" / "stop"', does: 'Cancel current command' },
     ],
   },
+  {
+    group: 'New in v9', emoji: '✨',
+    items: [
+      { say: '"listen" / "read it aloud"', does: 'Audiobook mode — on-device read-aloud' },
+      { say: '"bates" / "bates stamp"', does: 'Sequential legal Bates numbering' },
+      { say: '"custody" / "chain of custody"', does: 'Tamper-evident audit log page' },
+      { say: '"attachments"', does: 'Extract files embedded in the PDF' },
+      { say: '"find duplicates"', does: 'Detect & strip duplicate pages' },
+      { say: '"fix accessibility"', does: 'Auto-repair title, language, metadata' },
+      { say: '"install"', does: 'Install as an offline app' },
+    ],
+  },
 ]
 
 interface VoiceCommandProps {
@@ -98,6 +110,7 @@ export type VoiceCommandType = {
         | 'tilePrint' | 'emailhtml' | 'tamperseal' | 'recipe' | 'preflight'
         | 'microannot' | 'normalizesize' | 'present' | 'inkestimate' | 'timeline'
         | 'toneanalyse' | 'langdetect' | 'citations' | 'fontinspect'
+        | 'bates' | 'custody' | 'attachments' | 'deduppages' | 'a11yfix' | 'listen'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -368,6 +381,31 @@ const COMMAND_MAP: Array<{
   // SPELL CHECK
   { action: 'spellcheck' as any, label: 'Spell Check', emoji: '✓',
     keywords: /(spell check|spellcheck|spelling|grammar|check spelling|spell errors|typos|misspellings|double words)/i },
+
+  // ── v9 GAP-FILLER COMMANDS ──────────────────────────────────────────────
+  // BATES NUMBERING
+  { action: 'bates' as any, label: 'Bates Numbering', emoji: '⚖️',
+    keywords: /(bates|bates number|bates stamp|legal number|page stamp|ediscovery|e-discovery|litigation stamp|exhibit number)/i },
+
+  // CHAIN OF CUSTODY
+  { action: 'custody' as any, label: 'Chain of Custody', emoji: '⛓',
+    keywords: /(custody|chain of custody|audit trail|custody log|evidence log|tamper proof|forensic log|who touched)/i },
+
+  // ATTACHMENT EXTRACTOR
+  { action: 'attachments' as any, label: 'Extract Attachments', emoji: '📎',
+    keywords: /(attachments?|embedded files?|extract attachments?|files inside|portfolio|enclosures?|embedded documents?)/i },
+
+  // DUPLICATE PAGE FINDER
+  { action: 'deduppages' as any, label: 'Find Duplicate Pages', emoji: '👯',
+    keywords: /(duplicates?|dupe|dedupe|de-dupe|duplicate pages?|repeated pages?|same page twice|find copies|strip duplicates?|remove duplicates?)/i },
+
+  // ACCESSIBILITY AUTO-FIXER
+  { action: 'a11yfix' as any, label: 'Accessibility Auto-Fix', emoji: '🛠',
+    keywords: /(fix accessibility|accessibility fix|auto-?fix|repair accessibility|make accessible|fix a11y|a11y fix|repair document)/i },
+
+  // LISTEN TO PDF
+  { action: 'listen' as any, label: 'Listen to PDF', emoji: '🎧',
+    keywords: /(listen|read (it |aloud|to me|out loud)|audiobook|text to speech|tts|speak|read this|hear it|audio version|read the document)/i },
 
   // BATCH RULES
   { action: 'batchrules' as any, label: 'Batch Rules', emoji: '⚙️',
@@ -848,14 +886,39 @@ export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCo
     if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current)
   }, [])
 
+  // ── v9 gap fill: typed command console ─────────────────────────────────
+  // Speech recognition is Chrome/Edge-only; the command *brain* (synonym
+  // map, fuzzy scoring, confirmation flow) is pure JS and works everywhere.
+  // Safari/Firefox/mobile users now get the full command set by typing.
   if (!isSupported) return (
-    <div className="card h-full animate-fade-up flex flex-col justify-center" style={{ animationDelay: '0.1s' }}>
+    <div className="card h-full animate-fade-up flex flex-col justify-center gap-3" style={{ animationDelay: '0.1s' }}>
       <div className="flex items-center gap-3 text-sm" style={{ color: 'var(--ink-muted)' }}>
         <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
         </svg>
-        Voice commands require Chrome or Edge
+        Voice input needs Chrome/Edge — but every command works typed:
       </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          const input = e.currentTarget.elements.namedItem('typedCmd') as HTMLInputElement
+          if (input.value.trim()) { processCommand(input.value.trim()); input.value = '' }
+        }}
+        className="flex gap-2"
+      >
+        <input
+          name="typedCmd"
+          type="text"
+          placeholder='Try "compress", "sign", "listen", "bates"…'
+          aria-label="Type a command"
+          className="flex-1 text-sm px-3 py-2 rounded-lg outline-none"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+        />
+        <button type="submit" className="btn-primary text-xs px-3 py-2" disabled={isProcessing}>Run</button>
+      </form>
+      {statusMessage && (
+        <p className="text-xs" style={{ color: 'var(--ink-muted)' }} aria-live="polite">{statusMessage}</p>
+      )}
     </div>
   )
 

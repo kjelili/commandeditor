@@ -13,7 +13,7 @@ import * as pdfjs from 'pdfjs-dist';
 
 // Configure pdf.js worker (matches the rest of the app)
 if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 }
 
 import type { DiffResult, ComparisonSettings } from '../types';

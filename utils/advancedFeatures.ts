@@ -455,7 +455,7 @@ export interface PreflightReport {
 export async function runPrintPreflight(file: File): Promise<PreflightReport> {
   const { PDFDocument } = await import('pdf-lib')
   const pdfjsLib = await import('pdfjs-dist')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
   const buf = await file.arrayBuffer()
   const doc = await PDFDocument.load(buf, { ignoreEncryption: true })
@@ -546,7 +546,7 @@ export async function runPrintPreflight(file: File): Promise<PreflightReport> {
 // ─── 11. PDF → EMAIL-READY HTML ──────────────────────────────────────────────
 export async function pdfToEmailHTML(file: File): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
   const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
   
   // Only process first page for email
