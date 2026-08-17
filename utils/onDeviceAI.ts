@@ -6,14 +6,24 @@
  * from HuggingFace and cached (the service worker keeps them offline).
  */
 
-import { pipeline, env } from '@xenova/transformers';
-
-env.allowLocalModels = false;
-env.useBrowserCache = true;
-try {
-  (env as any).backends.onnx.wasm.wasmPaths =
-    'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/';
-} catch {}
+// Lazy-load transformers.js so merely importing this module (e.g. for
+// TRANSLATION_PAIRS inside a server-rendered component) doesn't pull in the
+// Node image backend (sharp) at build/prerender time. It loads on first use.
+let tfP: Promise<typeof import('@xenova/transformers')> | null = null;
+function tf() {
+  if (!tfP) {
+    tfP = import('@xenova/transformers').then((m) => {
+      m.env.allowLocalModels = false;
+      m.env.useBrowserCache = true;
+      try {
+        (m.env as any).backends.onnx.wasm.wasmPaths =
+          'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/';
+      } catch {}
+      return m;
+    });
+  }
+  return tfP;
+}
 
 // ─── SUMMARIZE ─────────────────────────────────────────────────────────────
 // Extractive-first: reuse the tiny embedding model (all-MiniLM-L6-v2, ~23 MB)
@@ -30,7 +40,7 @@ export interface SummaryResult {
 
 let embedderP: Promise<any> | null = null;
 function getEmbedder() {
-  if (!embedderP) embedderP = pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { quantized: true } as any);
+  if (!embedderP) embedderP = tf().then((m) => m.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { quantized: true } as any));
   return embedderP;
 }
 
@@ -99,7 +109,7 @@ export const TRANSLATION_PAIRS: Array<{ id: string; label: string; model: string
 
 const translators = new Map<string, Promise<any>>();
 function getTranslator(model: string) {
-  if (!translators.has(model)) translators.set(model, pipeline('translation', model, { quantized: true } as any));
+  if (!translators.has(model)) translators.set(model, tf().then((m) => m.pipeline('translation', model, { quantized: true } as any)));
   return translators.get(model)!;
 }
 
@@ -143,7 +153,7 @@ export async function transcribeOnDevice(
   onProgress?: (msg: string) => void
 ): Promise<string> {
   onProgress?.('Loading Whisper (one-time ~40 MB download)…');
-  if (!whisperP) whisperP = pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', { quantized: true } as any);
+  if (!whisperP) whisperP = tf().then((m) => m.pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', { quantized: true } as any));
   const asr: any = await whisperP;
   onProgress?.('Transcribing…');
   const res = await asr(audio);
