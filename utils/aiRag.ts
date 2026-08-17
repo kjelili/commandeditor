@@ -9,9 +9,16 @@
 import { pipeline, env, type FeatureExtractionPipeline } from '@xenova/transformers';
 import type { DocumentChunk, AIQueryResult, ChatMessage } from '../types';
 
-// Configure transformers.js to use local/remote models
-env.allowLocalModels = true;
+// Configure transformers.js: we ship no local models, so fetch straight from
+// the HuggingFace CDN (allowLocalModels=true would 404 on /models/... first),
+// and cache in the browser so it's only downloaded once.
+env.allowLocalModels = false;
 env.useBrowserCache = true;
+// onnxruntime-web WASM binaries — load from jsdelivr (CSP-allowed).
+try {
+  (env as any).backends.onnx.wasm.wasmPaths =
+    'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/';
+} catch {}
 
 const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2';
 const CHAT_MODEL = 'Xenova/tinyllama-v1.1-chat-v1.0'; // ~600MB, runs in browser

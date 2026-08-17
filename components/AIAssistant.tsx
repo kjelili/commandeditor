@@ -54,11 +54,13 @@ export const AIAssistant: React.FC<Props> = ({
         content: `I've analyzed **${fileName}** (${pdfTextByPage.length} pages). Ask me anything about this document, or try:\n• "Summarize this document"\n• "What are the key points on page ${currentPage + 1}?"\n• "Find mentions of [topic]"`,
         timestamp: Date.now(),
       }]);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('AI init failed:', error);
       setMessages(prev => [...prev, {
         id: 'error',
         role: 'assistant',
-        content: 'Failed to initialize AI. Please try again.',
+        content: 'Could not load the AI model: ' + (error?.message || String(error)) +
+          '\n\nThe first use downloads a ~20MB model from HuggingFace; check your connection and try again.',
         timestamp: Date.now(),
       }]);
     } finally {
