@@ -33,6 +33,7 @@ const FingerprintTool = dynamic(() => import('@/components/FingerprintTool'), { 
 const PrintToPDFTool = dynamic(() => import('@/components/PrintToPDFTool'), { ssr: false })
 const TimeLockTool = dynamic(() => import('@/components/TimeLockTool'), { ssr: false })
 const PWAInstaller = dynamic(() => import('@/components/PWAInstaller'), { ssr: false })
+const MobileQuickBar = dynamic(() => import('@/components/MobileQuickBar'), { ssr: false })
 
 // Maps each tool to a descriptive filename suffix, so a compressed file
 // downloads as "report-compressed.pdf" rather than a vague "report-edited.pdf".
@@ -147,6 +148,20 @@ export default function Home() {
         setSelectedTool(tool)
       }, 600)
     }
+    // v10: autorun recipe URL — /?recipe=<encoded>&autorun=1
+    // The recipe waits for the first upload, then executes its steps via the
+    // same trigger pipeline voice commands use. This makes CommandEditor a
+    // URL-addressable automation API: colleagues send links, not instructions.
+    const recipeParam = params.get('recipe')
+    if (recipeParam) {
+      ;(async () => {
+        const { decodeRecipe } = await import('@/utils/advancedFeatures')
+        const steps = decodeRecipe(window.location.href)
+        if (!steps || steps.length === 0) return
+        ;(window as any).__pendingRecipe = steps
+        showStatus(`🔗 Recipe loaded (${steps.length} steps) — drop a file to run it${params.get('autorun') === '1' ? ' automatically' : ''}`)
+      })()
+    }
     return () => {
       window.removeEventListener('beforeinstallprompt', pwaHandler)
       window.removeEventListener('beforeunload', unloadHandler)
@@ -206,6 +221,20 @@ export default function Home() {
     setOutputFileName(files[0]?.name.replace(/\.[^.]+$/, '') + '-edited' || 'output')
     if (files.length > 0) {
       showStatus(`${files.length} file${files.length > 1 ? 's' : ''} loaded`)
+      // v10: run a pending autorun recipe once a file is available
+      const pending = (window as any).__pendingRecipe
+      if (pending && pending.length) {
+        ;(window as any).__pendingRecipe = null
+        setTimeout(async () => {
+          const trigger = (window as any).__triggerToolAction
+          if (!trigger) return
+          for (const step of pending) {
+            try { await trigger(step.tool, step.params?.format) } catch {}
+            await new Promise(r => setTimeout(r, 400))
+          }
+          showStatus(`✓ Recipe finished (${pending.length} steps)`)
+        }, 1200)
+      }
       try {
         const existing: Array<{name:string;size:number;ts:number}> = JSON.parse(localStorage.getItem('commandeditor-recent') || '[]')
         const newEntries = files.map(f => ({ name: f.name, size: f.size, ts: Date.now() }))
@@ -301,6 +330,9 @@ export default function Home() {
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
         const pdf = await pdfjsLib.getDocument({ data: await pdfFile.arrayBuffer() }).promise
+        // Expose the live pdf.js document to the Plugin SDK (v10 gap fill:
+        // the SDK's getPDFDocument() read this but nothing ever set it).
+        ;(window as any).__ceActiveDocument = pdf
         const texts: string[] = []
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i)
@@ -411,7 +443,9 @@ export default function Home() {
       'recipe','preflight','microannot','normalizesize','present','inkestimate',
       'timeline','toneanalyse','langdetect','citations',
       // v9 gap-filler pack
-      'bates','custody','attachments','deduppages','a11yfix','listen']
+      'bates','custody','attachments','deduppages','a11yfix','listen',
+      // v10 flexibility pack
+      'epub','summarize','translate','watchfolder','netaudit','policy']
     if (v6Tools.includes(command.action)) { handleToolSelect(command.action); return }
     if (uploadedFiles.length === 0) { showStatus('Upload a file first'); return }
     const toolTrigger = (window as any).__triggerToolAction
@@ -455,7 +489,7 @@ export default function Home() {
               </div>
               <span className="font-bold text-lg tracking-tight text-white transition-opacity group-hover:opacity-80" style={{ fontFamily: 'Syne, sans-serif' }}>CommandEditor</span>
             </a>
-            <span className="badge text-xs" style={{ background: 'rgba(96,165,250,0.15)', color: 'var(--blue-glow)', fontSize: '10px' }}>v9</span>
+            <span className="badge text-xs" style={{ background: 'rgba(96,165,250,0.15)', color: 'var(--blue-glow)', fontSize: '10px' }}>v10</span>
           </div>
           <div className="flex items-center gap-2">
             <PWAInstaller />
@@ -543,7 +577,7 @@ export default function Home() {
             </h1>
             <p className="text-lg md:text-xl mb-10 max-w-xl animate-fade-up"
                style={{ color: 'rgba(255,255,255,0.75)', animationDelay: '0.16s', lineHeight: 1.7 }}>
-              80+ tools in one private toolkit — now with an on-device AI assistant, cryptographic
+              85+ tools in one private toolkit — now with an on-device AI assistant, cryptographic
               e-signatures, document fingerprinting, and 50+ hands-free voice commands.
               Everything runs in your browser. Your documents never touch a server.
             </p>
@@ -560,7 +594,7 @@ export default function Home() {
               </button>
             </div>
             <div className="flex flex-wrap gap-10 mt-16 animate-fade-up" style={{ animationDelay: '0.32s' }}>
-              {[{ val: '80+', label: 'PDF tools' }, { val: '50+', label: 'Voice commands' }, { val: '0', label: 'Server uploads' }, { val: '∞', label: 'File size limit' }].map(s => (
+              {[{ val: '85+', label: 'PDF tools' }, { val: '50+', label: 'Voice commands' }, { val: '0', label: 'Server uploads' }, { val: '∞', label: 'File size limit' }].map(s => (
                 <div key={s.label}>
                   <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'Syne, sans-serif', background: 'linear-gradient(90deg, white, var(--blue-glow))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{s.val}</div>
                   <div className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{s.label}</div>
@@ -597,7 +631,7 @@ export default function Home() {
       <section className="border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center mb-14">
-            <p className="section-label mb-3">New in v9</p>
+            <p className="section-label mb-3">New in v9 &amp; v10</p>
             <h2 className="text-4xl md:text-5xl mb-4">Beyond the basics.</h2>
             <p className="text-base max-w-2xl mx-auto" style={{ color: 'var(--ink-muted)' }}>
               Capabilities you won&apos;t find in other free, in-browser PDF tools — every one runs
@@ -906,6 +940,18 @@ export default function Home() {
               }} className="btn-primary flex-shrink-0" style={{ background: 'var(--green)' }}>
                 ⬇ Download
               </button>
+              {/* v10 interop: save straight into a folder (local or network share) */}
+              <button onClick={async () => {
+                const f = processedFile
+                if (!f) return
+                try {
+                  const { saveToFolder } = await import('@/utils/interop')
+                  const dir = await saveToFolder(f, (outputFileName || 'output') + '.pdf')
+                  showStatus(`✓ Saved to folder "${dir}"`)
+                } catch { /* user cancelled */ }
+              }} className="btn-ghost flex-shrink-0 text-xs" title="Save directly into a folder — Chrome/Edge">
+                📁 To folder
+              </button>
             </div>
             <NextStepChips lastTool={lastCompletedTool} onSelectTool={handleToolSelect} />
           </div>
@@ -1021,7 +1067,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <p className="section-label mb-3">Everything included</p>
-            <h2 className="text-4xl md:text-5xl mb-4">80+ tools. Zero cost.</h2>
+            <h2 className="text-4xl md:text-5xl mb-4">85+ tools. Zero cost.</h2>
             <p className="text-base max-w-xl mx-auto" style={{ color: 'var(--ink-muted)' }}>
               Every tool runs entirely in your browser. No sign-up, no subscriptions, no limits.
             </p>
@@ -1272,6 +1318,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* v10: mobile-first quick actions — thumb-reach bar on small screens */}
+      <MobileQuickBar onTool={handleToolSelect} />
     </div>
   )
 }

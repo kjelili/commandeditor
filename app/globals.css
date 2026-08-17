@@ -296,3 +296,9 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+
+/* ── v10 mobile-first: keep content clear of the quick-action bar ─────── */
+@media (max-width: 640px) {
+  body { padding-bottom: 64px; }
+  main, section { scroll-margin-bottom: 72px; }
+}

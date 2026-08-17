@@ -30,6 +30,11 @@ import {
   autoFixAccessibility, BatesOptions, CustodyEntry, AttachmentInfo, DupeGroup, A11yFixReport
 } from '@/utils/gapFillers'
 import ListenTool from '@/components/ListenTool'
+import WatchFolderTool from '@/components/WatchFolderTool'
+import NetworkAuditTool from '@/components/NetworkAuditTool'
+import { pdfToEpub, webdavUpload, saveToFolder, canUseFsAccess } from '@/utils/interop'
+import { summarizeOnDevice, translateOnDevice, TRANSLATION_PAIRS } from '@/utils/onDeviceAI'
+import { POLICY_PRESETS, getActivePolicy, setActivePolicy } from '@/utils/enterprise'
 
 interface PDFToolsProps {
   files: File[]
@@ -46,6 +51,11 @@ interface PDFToolsProps {
   onProgress?: (page: number, total: number) => void
   onSizeChange?: (before: number) => void
 }
+
+// Tools that are fully usable with no file uploaded (v10: corrected the
+// blanket "upload first" disable so utilities like policy/watch/audit are
+// reachable from an empty state).
+const NO_FILE_TOOLS = ['hashcheck', 'aesencrypt', 'formbuilder', 'cloudconnect', 'printpdf', 'timelock', 'macro', 'recipe', 'watchfolder', 'netaudit', 'policy']
 
 const TOOLS = [
   { id: 'merge',       name: 'Merge',       fullName: 'Merge PDFs',         emoji: '⊕',  desc: 'Combine PDFs',    requiresPDF: true,    color: '#2563eb', colorLight: '#dbeafe' },
@@ -133,6 +143,13 @@ const TOOLS = [
   { id: 'deduppages',  name: 'De-dupe',     fullName: 'Duplicate Page Finder',    emoji:'👯', desc:'Find & strip dupes',    requiresPDF:true,  color:'#b45309',colorLight:'#fef3c7' },
   { id: 'a11yfix',     name: 'A11y Fix',    fullName: 'Accessibility Auto-Fixer', emoji:'🛠', desc:'Repair, not just audit', requiresPDF:true, color:'#059669',colorLight:'#d1fae5' },
   { id: 'listen',      name: 'Listen',      fullName: 'Listen to PDF (Audiobook)',emoji:'🎧', desc:'On-device read-aloud',  requiresPDF:true,  color:'#7c3aed',colorLight:'#ede9fe' },
+  // ── v10 FLEXIBILITY PACK ────────────────────────────────────────────────
+  { id: 'epub',        name: 'PDF→EPUB',    fullName: 'PDF to EPUB (e-reader)',   emoji:'📚', desc:'Reflowable ebook',      requiresPDF:true,  color:'#b45309',colorLight:'#fef3c7' },
+  { id: 'summarize',   name: 'Summarize',   fullName: 'On-Device AI Summary',     emoji:'📝', desc:'Key points, no cloud',  requiresPDF:true,  color:'#0d9488',colorLight:'#ccfbf1' },
+  { id: 'translate',   name: 'Translate',   fullName: 'On-Device Translation',    emoji:'🌍', desc:'9 language pairs',      requiresPDF:true,  color:'#4338ca',colorLight:'#e0e7ff' },
+  { id: 'watchfolder', name: 'Watch Folder',fullName: 'Watch Folder Automation',  emoji:'👁', desc:'Hot-folder auto-process',requiresPDF:false,color:'#0369a1',colorLight:'#e0f2fe' },
+  { id: 'netaudit',    name: 'No-Upload',   fullName: 'Proof of No Upload',       emoji:'🕵️', desc:'Live network audit',    requiresPDF:false, color:'#059669',colorLight:'#d1fae5' },
+  { id: 'policy',      name: 'Policy',      fullName: 'Enterprise Policy Presets',emoji:'🏛', desc:'Legal/health/gov modes',requiresPDF:false, color:'#1c1917',colorLight:'#f5f5f4' },
 ]
 
 export default function PDFTools({
@@ -300,6 +317,22 @@ export default function PDFTools({
   // Accessibility auto-fix
   const [a11yFixReport, setA11yFixReport] = useState<A11yFixReport | null>(null)
   const [a11yFixLoading, setA11yFixLoading] = useState(false)
+  // ── v10 FLEXIBILITY PACK STATE ──────────────────────────────────────────
+  const [summaryResult, setSummaryResult] = useState<any | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const [summaryRatio, setSummaryRatio] = useState(0.2)
+  const [transPair, setTransPair] = useState('en-es')
+  const [transResult, setTransResult] = useState<any | null>(null)
+  const [transLoading, setTransLoading] = useState(false)
+  const [transProgress, setTransProgress] = useState('')
+  const [policyId, setPolicyId] = useState('none')
+  const policy = POLICY_PRESETS.find(p => p.id === policyId) || POLICY_PRESETS[0]
+  useEffect(() => {
+    setPolicyId(getActivePolicy().id)
+    const onChange = (e: any) => setPolicyId(e.detail)
+    window.addEventListener('commandeditor-policy-changed', onChange)
+    return () => window.removeEventListener('commandeditor-policy-changed', onChange)
+  }, [])
   const [tilePage, setTilePage] = useState(1)
   // Email HTML
   const [emailHtmlResult, setEmailHtmlResult] = useState<string|null>(null)
@@ -466,6 +499,11 @@ export default function PDFTools({
            'legalcites', 'invoiceparse', 'clauses', 'fingerprint'].includes(toolId) && !hasPDFs) { showStatus('Upload a PDF first'); return }
       onToolSelect(toolId)
       return
+    }
+
+    // v10 no-file tools must be reachable from an empty state
+    if (['watchfolder', 'netaudit', 'policy'].includes(toolId)) {
+      onToolSelect(toolId); return
     }
 
     if (files.length === 0) { showStatus('Upload files first'); return }
@@ -959,6 +997,50 @@ export default function PDFTools({
     if (toolId === 'listen') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
       onToolSelect('listen'); return
+    }
+
+    // ── v10 FLEXIBILITY PACK CASES ────────────────────────────────────────
+    if (toolId === 'epub') {
+      if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      onProcessingStart()
+      try {
+        const blob = await pdfToEpub(pdfFiles[0])
+        onProcessingComplete(new Blob([await blob.arrayBuffer()], { type: 'application/epub+zip' }), toolId)
+        showStatus('✓ EPUB created — send it to your e-reader')
+      } catch (e: any) { showStatus('EPUB export failed: ' + e.message); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'summarize') {
+      if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      setSummaryLoading(true); onToolSelect('summarize')
+      try {
+        const pages = await extractTextByPage(pdfFiles[0])
+        const result = await summarizeOnDevice(pages.map(p => p.text).join(' '), summaryRatio,
+          (msg) => showStatus(msg, 1500))
+        setSummaryResult(result)
+        showStatus('✓ Summary ready — generated entirely on-device')
+      } catch (e: any) { showStatus('Summarize failed: ' + e.message) }
+      setSummaryLoading(false); return
+    }
+
+    if (toolId === 'translate') {
+      if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      setTransLoading(true); onToolSelect('translate'); setTransResult(null)
+      try {
+        const pages = await extractTextByPage(pdfFiles[0])
+        const text = pages.map(p => p.text).join(' ').slice(0, 20000)
+        const result = await translateOnDevice(text, transPair, setTransProgress)
+        setTransResult(result)
+        const blob = new Blob([result.translated], { type: 'text/plain' })
+        onProcessingComplete(blob, toolId)
+        showStatus('✓ Translation complete — never left your device')
+      } catch (e: any) { showStatus('Translation failed: ' + e.message) }
+      setTransLoading(false); setTransProgress(''); return
+    }
+
+    if (toolId === 'watchfolder' || toolId === 'netaudit' || toolId === 'policy') {
+      onToolSelect(toolId); return
     }
 
     if (toolId === 'citations') {
@@ -1668,8 +1750,8 @@ export default function PDFTools({
           )}
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-2">
-          {TOOLS.filter(tool => !toolSearch || tool.name.toLowerCase().includes(toolSearch.toLowerCase()) || tool.desc.toLowerCase().includes(toolSearch.toLowerCase()) || tool.fullName.toLowerCase().includes(toolSearch.toLowerCase())).map((tool) => {
-            const disabled = files.length === 0 ||
+          {TOOLS.filter(tool => !policy.disabledTools.includes(tool.id)).filter(tool => !toolSearch || tool.name.toLowerCase().includes(toolSearch.toLowerCase()) || tool.desc.toLowerCase().includes(toolSearch.toLowerCase()) || tool.fullName.toLowerCase().includes(toolSearch.toLowerCase())).map((tool) => {
+            const disabled = (files.length === 0 && !NO_FILE_TOOLS.includes(tool.id)) ||
               (tool.requiresPDF && !hasPDFs) ||
               (tool.requiresNonPDF && !hasConvertible)
             const isActive = selectedTool === tool.id || (tool.id === 'edit' && localEditMode)
@@ -3854,6 +3936,85 @@ export default function PDFTools({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── v10: SUMMARIZE (on-device AI) ───────────────────────────────── */}
+      {selectedTool === 'summarize' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">📝</span>
+            <div><p className="font-semibold text-sm">On-Device AI Summary</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Key sentences ranked by semantic centrality — no cloud, no API key</p></div>
+          </div>
+          <div>
+            <label className="text-xs block mb-1" style={{color:'var(--ink-muted)'}}>Length — keep {Math.round(summaryRatio*100)}% of sentences</label>
+            <input type="range" min={0.05} max={0.5} step={0.05} value={summaryRatio} onChange={e => setSummaryRatio(Number(e.target.value))} className="w-full" />
+          </div>
+          <button onClick={() => handleToolAction('summarize')} disabled={summaryLoading} className="btn-primary w-full" style={{background:'#0d9488'}}>
+            {summaryLoading ? 'Summarising on-device…' : '📝 Summarize'}
+          </button>
+          {summaryResult && !summaryLoading && (
+            <div className="space-y-2">
+              <p className="text-xs" style={{color:'var(--ink-muted)'}}>{summaryResult.wordsBefore.toLocaleString()} → {summaryResult.wordsAfter.toLocaleString()} words · {summaryResult.method} · 0 bytes sent anywhere</p>
+              <div className="text-sm px-3 py-2 rounded-xl leading-relaxed" style={{background:'var(--surface)',border:'1px solid var(--border)'}}>{summaryResult.summary}</div>
+              <button onClick={() => downloadBlob(new Blob([summaryResult.summary], {type:'text/plain'}), 'summary.txt')} className="btn-ghost text-xs w-full">⬇ Download summary (.txt)</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── v10: TRANSLATE (on-device AI) ───────────────────────────────── */}
+      {selectedTool === 'translate' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">🌍</span>
+            <div><p className="font-semibold text-sm">On-Device Translation</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Helsinki-NLP models in your browser — the only free PDF translator that never uploads</p></div>
+          </div>
+          <div>
+            <label className="text-xs block mb-1" style={{color:'var(--ink-muted)'}}>Language pair (model downloads once, then works offline)</label>
+            <select value={transPair} onChange={e => setTransPair(e.target.value)}
+                    className="w-full text-sm px-3 py-2 rounded-lg" style={{background:'var(--surface)',border:'1px solid var(--border)',color:'var(--ink)'}}>
+              {TRANSLATION_PAIRS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+          </div>
+          <button onClick={() => handleToolAction('translate')} disabled={transLoading} className="btn-primary w-full" style={{background:'#4338ca'}}>
+            {transLoading ? (transProgress || 'Translating…') : '🌍 Translate'}
+          </button>
+          {transResult && !transLoading && (
+            <div className="text-sm px-3 py-2 rounded-xl max-h-56 overflow-y-auto leading-relaxed" style={{background:'var(--surface)',border:'1px solid var(--border)'}}>
+              {transResult.translated.slice(0, 2000)}{transResult.translated.length > 2000 ? '…' : ''}
+              <p className="text-xs mt-2" style={{color:'var(--ink-muted)'}}>Full text in the output download below.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── v10: WATCH FOLDER ───────────────────────────────────────────── */}
+      {selectedTool === 'watchfolder' && <WatchFolderTool showStatus={showStatus} />}
+
+      {/* ── v10: PROOF OF NO UPLOAD ─────────────────────────────────────── */}
+      {selectedTool === 'netaudit' && <NetworkAuditTool />}
+
+      {/* ── v10: ENTERPRISE POLICY PRESETS ──────────────────────────────── */}
+      {selectedTool === 'policy' && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">🏛</span>
+            <div><p className="font-semibold text-sm">Enterprise Policy Presets</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>One-tap enforcement profiles — serverless, stored only in this browser</p></div>
+          </div>
+          <div className="space-y-2">
+            {POLICY_PRESETS.map(p => (
+              <button key={p.id} onClick={() => { setActivePolicy(p.id); showStatus(p.id === 'none' ? 'Policy cleared' : `✓ ${p.label} policy active`) }}
+                      className="w-full text-left p-3 rounded-xl transition-colors"
+                      style={{background: policyId === p.id ? 'var(--blue-pale)' : 'var(--surface)', border: `1px solid ${policyId === p.id ? 'var(--blue-vivid)' : 'var(--border)'}`}}>
+                <p className="text-sm font-semibold">{p.emoji} {p.label} {policyId === p.id && <span style={{color:'var(--blue-vivid)'}}>· active</span>}</p>
+                <p className="text-xs mt-0.5" style={{color:'var(--ink-muted)'}}>{p.desc}</p>
+                {p.enforce.length > 0 && (
+                  <p className="text-xs mt-1" style={{color:'var(--ink-soft)'}}>Enforces: {p.enforce.join(' · ')}</p>
+                )}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs" style={{color:'var(--ink-muted)'}}>
+            Restricted tools are hidden from the grid while a policy is active. For air-gapped deployment, see AIRGAP.md in the repo — the whole app is static files and runs from any web server or localhost.
+          </p>
         </div>
       )}
 

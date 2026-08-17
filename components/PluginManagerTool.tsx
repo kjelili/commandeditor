@@ -66,7 +66,64 @@ export default function PluginManagerTool({ onClose, showStatus }: Props) {
   const [, force] = useState(0)
   const rerender = () => force(n => n + 1)
   const [showDocs, setShowDocs] = useState(false)
+  const [showMarket, setShowMarket] = useState(false)
+  const [pluginUrl, setPluginUrl] = useState('')
   const sdkRef = useRef<any>(null)
+  // Curated, bundled registry — see lib/plugin-marketplace.js
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const marketplace: any[] = (require('@/lib/plugin-marketplace') as any).MARKETPLACE_PLUGINS || []
+
+  const installFromUrl = async () => {
+    const url = pluginUrl.trim()
+    if (!url) return
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const code = await res.text()
+      const mod = { exports: {} as any }
+      new Function('module', 'exports', code)(mod, mod.exports)
+      await sdkRef.current.register(mod.exports.default || mod.exports)
+      // Remember URL so team configs can reinstall it
+      const urls = JSON.parse(localStorage.getItem('ce-plugin-urls') || '[]')
+      if (!urls.includes(url)) localStorage.setItem('ce-plugin-urls', JSON.stringify([...urls, url]))
+      rerender(); showStatus('✓ Plugin installed from URL')
+    } catch (e: any) { showStatus('Install failed: ' + e.message) }
+  }
+
+  const exportConfig = () => {
+    const cfg = {
+      standard: 'ce-plugin-config-1',
+      plugins: plugins.map((p: any) => p.id),
+      urls: JSON.parse(localStorage.getItem('ce-plugin-urls') || '[]'),
+    }
+    const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob); a.download = 'commandeditor-plugins.json'; a.click()
+    showStatus('✓ Config exported — share it with your team')
+  }
+
+  const importConfig = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const cfg = JSON.parse(await file.text())
+      // Bundled plugins by id
+      for (const id of cfg.plugins || []) {
+        const entry = marketplace.find((m: any) => m.id === id)
+        if (entry && !plugins.some((p: any) => p.id === id)) await sdkRef.current.register(entry.module)
+      }
+      // URL plugins
+      for (const url of cfg.urls || []) {
+        const res = await fetch(url); const code = await res.text()
+        const mod = { exports: {} as any }
+        new Function('module', 'exports', code)(mod, mod.exports)
+        await sdkRef.current.register(mod.exports.default || mod.exports)
+      }
+      localStorage.setItem('ce-plugin-urls', JSON.stringify(cfg.urls || []))
+      rerender(); showStatus('✓ Team plugin config applied')
+    } catch (err: any) { showStatus('Import failed: ' + err.message) }
+    e.target.value = ''
+  }
 
   useEffect(() => {
     const w = window as any
@@ -131,7 +188,56 @@ export default function PluginManagerTool({ onClose, showStatus }: Props) {
       <div className="flex flex-wrap gap-2">
         <button onClick={loadExample} className="btn-primary text-sm">Load example plugin</button>
         <button onClick={() => setShowDocs(s => !s)} className="btn-ghost text-sm">{showDocs ? 'Hide' : 'Show'} developer docs</button>
+        <button onClick={() => setShowMarket(s => !s)} className="btn-ghost text-sm">{showMarket ? 'Hide' : '🏪'} Marketplace</button>
       </div>
+
+      {/* ── v10: Plugin Marketplace ───────────────────────────────────────── */}
+      {showMarket && (
+        <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+          <p className="text-xs font-semibold">🏪 Marketplace — curated plugins, one-click install, zero servers</p>
+          {marketplace.map((entry: any) => {
+            const installed = plugins.some((p: any) => p.id === entry.id)
+            return (
+              <div key={entry.id} className="flex items-center gap-3 p-2.5 rounded-lg" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{entry.module.manifest.name} <span className="text-xs" style={{ color: 'var(--ink-muted)' }}>v{entry.module.manifest.version}</span></p>
+                  <p className="text-xs" style={{ color: 'var(--ink-muted)' }}>{entry.tagline}</p>
+                </div>
+                <button
+                  disabled={installed}
+                  onClick={async () => {
+                    try { await sdkRef.current.register(entry.module); rerender(); showStatus(`✓ ${entry.module.manifest.name} installed`) }
+                    catch (e: any) { showStatus('Install failed: ' + e.message) }
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                  style={installed ? { background: 'var(--surface)', color: 'var(--ink-muted)' } : { background: 'var(--accent)', color: 'white' }}
+                >
+                  {installed ? '✓ Installed' : 'Install'}
+                </button>
+              </div>
+            )
+          })}
+          {/* Install by URL — third parties host a plugin .js anywhere */}
+          <div className="flex gap-2 pt-1">
+            <input value={pluginUrl} onChange={e => setPluginUrl(e.target.value)} placeholder="https://example.com/my-plugin.js"
+                   className="flex-1 text-xs px-3 py-2 rounded-lg outline-none"
+                   style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', color: 'var(--ink)' }} />
+            <button onClick={installFromUrl} className="text-xs px-3 py-2 rounded-lg font-medium"
+                    style={{ background: 'var(--accent)', color: 'white' }}>Install URL</button>
+          </div>
+          <p className="text-xs" style={{ color: 'var(--ink-muted)' }}>
+            URL plugins execute with page privileges — only install code you trust (read the source first).
+          </p>
+          {/* Shared config: export/import the installed set for team rollouts */}
+          <div className="flex gap-2 pt-1">
+            <button onClick={exportConfig} className="btn-ghost text-xs">⬇ Export plugin config</button>
+            <label className="btn-ghost text-xs cursor-pointer">
+              ⬆ Import config
+              <input type="file" accept=".json" className="hidden" onChange={importConfig} />
+            </label>
+          </div>
+        </div>
+      )}
 
       {showDocs && (
         <div className="text-xs space-y-2 p-3 rounded-xl font-mono whitespace-pre-wrap" style={{ background: 'var(--surface-2)' }}>

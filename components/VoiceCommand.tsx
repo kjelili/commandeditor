@@ -88,6 +88,17 @@ const COMMAND_REFERENCE: { group: string; emoji: string; items: { say: string; d
       { say: '"install"', does: 'Install as an offline app' },
     ],
   },
+  {
+    group: 'New in v10', emoji: '🚀',
+    items: [
+      { say: '"summarize" / "key points"', does: 'On-device AI summary — no cloud' },
+      { say: '"translate"', does: 'On-device translation, 9 language pairs' },
+      { say: '"to epub" / "ebook"', does: 'Reflowable EPUB for e-readers' },
+      { say: '"watch folder"', does: 'Hot-folder automation on local/network drives' },
+      { say: '"prove no upload"', does: 'Live network audit — verify the privacy claim' },
+      { say: '"legal mode" / "hipaa"', does: 'Enterprise policy presets' },
+    ],
+  },
 ]
 
 interface VoiceCommandProps {
@@ -111,6 +122,7 @@ export type VoiceCommandType = {
         | 'microannot' | 'normalizesize' | 'present' | 'inkestimate' | 'timeline'
         | 'toneanalyse' | 'langdetect' | 'citations' | 'fontinspect'
         | 'bates' | 'custody' | 'attachments' | 'deduppages' | 'a11yfix' | 'listen'
+        | 'epub' | 'summarize' | 'translate' | 'watchfolder' | 'netaudit' | 'policy'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -406,6 +418,20 @@ const COMMAND_MAP: Array<{
   // LISTEN TO PDF
   { action: 'listen' as any, label: 'Listen to PDF', emoji: '🎧',
     keywords: /(listen|read (it |aloud|to me|out loud)|audiobook|text to speech|tts|speak|read this|hear it|audio version|read the document)/i },
+
+  // ── v10 FLEXIBILITY COMMANDS ────────────────────────────────────────────
+  { action: 'epub' as any, label: 'PDF to EPUB', emoji: '📚',
+    keywords: /(epub|e-?pub|ebook|e-?book|kindle|e-?reader|kobo|to epub)/i },
+  { action: 'summarize' as any, label: 'Summarize', emoji: '📝',
+    keywords: /(summari[sz]e|summary|sum up|key points|tldr|tl;dr|main points|digest|condense|gist)/i },
+  { action: 'translate' as any, label: 'Translate', emoji: '🌍',
+    keywords: /(translat|in spanish|in french|in german|to spanish|to french|to german|to chinese|another language)/i },
+  { action: 'watchfolder' as any, label: 'Watch Folder', emoji: '👁',
+    keywords: /(watch folder|hot folder|watch a folder|folder automation|auto-?process folder|monitor folder)/i },
+  { action: 'netaudit' as any, label: 'Proof of No Upload', emoji: '🕵️',
+    keywords: /(no upload|network audit|proof of privacy|verify privacy|audit network|prove (it|no upload)|trust check)/i },
+  { action: 'policy' as any, label: 'Policy Presets', emoji: '🏛',
+    keywords: /(policy|preset|legal mode|healthcare mode|government mode|hipaa|compliance mode|air-?gap)/i },
 
   // BATCH RULES
   { action: 'batchrules' as any, label: 'Batch Rules', emoji: '⚙️',
@@ -744,6 +770,7 @@ export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCo
   const [heardText, setHeardText] = useState('')
   const [showCommandRef, setShowCommandRef] = useState(false)
   const [refSearch, setRefSearch] = useState('')
+  const [whisperBusy, setWhisperBusy] = useState(false)
 
   const recognitionRef = useRef<any>(null)
   const awakeTimeoutRef = useRef<NodeJS.Timeout|null>(null)
@@ -802,6 +829,28 @@ export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCo
       setStatusMessage('Say "Hey Editor"'); setPendingCandidates([]); setHeardText('')
     }, 10000)
   }, [executeCommand])
+
+  // ── v10: on-device voice (Whisper beta) ────────────────────────────────
+  // Records up to 8 s, transcribes with whisper-tiny entirely in-browser
+  // (downloaded once, cached by the service worker), then feeds the text to
+  // the same command matcher. Gives Safari/Firefox real voice input and
+  // gives Chrome voice that works with no network at all.
+  const onDeviceVoice = useCallback(async () => {
+    if (whisperBusy) return
+    setWhisperBusy(true)
+    setStatus('listening'); setStatusMessage('🧠 Recording — speak now (8s max)…')
+    try {
+      const { recordAudio16k, transcribeOnDevice } = await import('@/utils/onDeviceAI')
+      const audio = await recordAudio16k(8000)
+      const text = await transcribeOnDevice(audio, (msg) => setStatusMessage('🧠 ' + msg))
+      if (text) { setTranscript(text); processCommand(text) }
+      else { setStatus('idle'); setStatusMessage('Nothing heard — try again') }
+    } catch (e: any) {
+      setStatus('error'); setStatusMessage('On-device voice failed: ' + (e?.message || e))
+      setTimeout(() => setStatus('idle'), 4000)
+    }
+    setWhisperBusy(false)
+  }, [whisperBusy, processCommand])
 
   const handleConfirmVoice = useCallback((text: string) => {
     const t = text.toLowerCase()
@@ -979,6 +1028,12 @@ export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCo
                   className={isListening ? 'btn-ghost text-xs px-3 py-2' : 'btn-primary text-xs px-3 py-2'}
                   style={isListening ? { background: 'var(--surface-2)', color: 'var(--ink)' } : {}}>
             {isListening ? 'Stop' : '🎤 Start'}
+          </button>
+          <button onClick={onDeviceVoice} disabled={isProcessing || whisperBusy}
+                  aria-label="On-device voice recognition (beta) — works offline"
+                  title="Whisper runs in your browser — voice works offline and in any browser"
+                  className="btn-ghost text-xs px-3 py-2">
+            {whisperBusy ? '…' : '🧠 Beta'}
           </button>
         </div>
       </div>

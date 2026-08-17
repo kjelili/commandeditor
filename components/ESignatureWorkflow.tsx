@@ -658,7 +658,8 @@ export const ESignatureWorkflow: React.FC<Props> = ({ pdfBytes, fileName, onSave
             </div>
           </div>
 
-          <button 
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
             onClick={() => {
               const blob = new Blob([JSON.stringify(certificate, null, 2)], { type: 'application/json' });
               const url = URL.createObjectURL(blob);
@@ -671,6 +672,38 @@ export const ESignatureWorkflow: React.FC<Props> = ({ pdfBytes, fileName, onSave
           >
             Download Certificate
           </button>
+
+          {/* v10: Qualified/eIDAS bridge — package the digest + signature so a
+              Qualified Trust Service Provider can upgrade this to a legally
+              qualified signature without ever seeing the document itself. */}
+          <button
+            onClick={async () => {
+              try {
+                const { buildSigningPackage } = await import('@/utils/enterprise');
+                const file = new File([pdfBytes as unknown as BlobPart], fileName, { type: 'application/pdf' });
+                const pkg = await buildSigningPackage(file, JSON.stringify({
+                  algorithm: 'ECDSA-P256-SHA256',
+                  signature: certificate.auditTrail.find(a => a.signature)?.signature || '',
+                  publicKey: (certificate.auditTrail.find(a => a.signature) as any)?.publicKey || null,
+                  signer: certificate.signers.map(s => s.name).join(', '),
+                  timestamp: new Date(certificate.createdAt).toISOString(),
+                  certificateId: certificate.certificateId,
+                  documentHash: certificate.documentHash,
+                }));
+                const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${fileName.replace('.pdf', '')}_tsp-package.json`;
+                a.click();
+              } catch { /* package export is best-effort */ }
+            }}
+            style={{ ...btnStyle, background: '#0d9488', color: 'white' }}
+            title="Export a TSP-ready package: document digest + signature, with instructions for a Qualified Trust Service Provider to countersign"
+          >
+            🏛 Export TSP-Ready Package
+          </button>
+          </div>
         </div>
       )}
 

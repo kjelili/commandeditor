@@ -1,3 +1,20 @@
+# CommandEditor v10
+
+> **New in v10 — the flexibility release.** Every item on the competitive-gap list, shipped:
+> - 🏪 **Plugin marketplace** — curated one-click installs, install-from-URL, and team config export/import. The SDK's `getPDFDocument()` now actually reaches the live document.
+> - 🧠 **On-device voice (Whisper beta)** — real voice input in Safari/Firefox and offline voice in Chrome; browser STT is no longer the only path. (Typed commands still work everywhere.)
+> - 🏛 **TSP-ready signature export** — digest + signature + public key packaged with instructions so a Qualified Trust Service Provider can upgrade any signature to eIDAS-qualified.
+> - 👁 **Watch Folder** — hot-folder automation via the File System Access API: new PDFs in a local or network folder get compressed/Bates-stamped automatically.
+> - 🔗 **Autorun recipe URLs** — `/?recipe=…&autorun=1` turns a shared link into a one-drop automation pipeline.
+> - 📱 **Mobile quick bar** — thumb-reach bottom navigation on small screens; with the PWA install, the toolkit *is* the mobile app.
+> - 📚 **PDF → EPUB** — reflowable ebooks for Kindle/Kobo. No other free in-browser tool does this.
+> - 📝 **On-device AI summary** — embedding-based extractive summaries, zero cloud.
+> - 🌍 **On-device translation** — 9 language pairs via Helsinki-NLP models, downloaded once, then offline forever.
+> - 🏛 **Enterprise policy presets** — legal / healthcare / government profiles that gate tools without any server.
+> - 🕵️ **Proof of No Upload** — a live network egress auditor so users can *verify* the privacy claim instead of trusting it.
+> - 🔎 **SEO trust layer** — honest `/compare` pages vs iLovePDF, Smallpdf and Adobe, plus `SECURITY.md` and `AIRGAP.md`.
+> - 📁 **Save to folder** — write outputs straight into a local or network directory.
+
 # CommandEditor v9
 
 > **New in v9 — the gap-filler release:**
