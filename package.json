@@ -44,5 +44,11 @@
   },
   "files": [
     "cli/"
-  ]
+  ],
+  "overrides": {
+    "sharp": "^0.33.5"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
 }

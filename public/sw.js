@@ -47,7 +47,7 @@ self.addEventListener('fetch', (event) => {
   // v11: PWA share target — intercept the POST, stash the shared file in the
   // Cache API, and redirect into the app where page.tsx picks it up. The file
   // never leaves the device; the cache entry is deleted after one read.
-  if (request.method === 'POST' && new URL(request.url).pathname === '/share-target') {
+  if (request.method === 'POST' && /^\/share-target\/?$/.test(new URL(request.url).pathname)) {
     event.respondWith((async () => {
       try {
         const form = await request.formData();
