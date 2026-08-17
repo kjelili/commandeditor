@@ -155,3 +155,18 @@ export async function watchFolder(
 
   return { stop: () => { stopped = true }, dirName: dir.name }
 }
+
+// ─── PWA SHARE TARGET: pick up a file handed to the installed app ──────────
+// The service worker intercepts the POST /share-target navigation, stashes
+// the file in the Cache API, and redirects to /?shared=1. This retrieves it.
+export async function getShareTargetFile(): Promise<File | null> {
+  try {
+    const cache = await caches.open('ce-share-target')
+    const res = await cache.match('/share-target-file')
+    if (!res) return null
+    const blob = await res.blob()
+    const name = res.headers.get('x-file-name') || 'shared.pdf'
+    await cache.delete('/share-target-file')
+    return new File([blob], name, { type: blob.type || 'application/pdf' })
+  } catch { return null }
+}

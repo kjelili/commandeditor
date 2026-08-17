@@ -41,6 +41,34 @@
     "utilities",
     "business"
   ],
+  "file_handlers": [
+    {
+      "action": "/?filehandler=open",
+      "accept": {
+        "application/pdf": [".pdf"]
+      },
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ],
+      "launch_type": "single-client"
+    }
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "pdf",
+          "accept": ["application/pdf", "image/*"]
+        }
+      ]
+    }
+  },
   "shortcuts": [
     {
       "name": "Merge PDFs",

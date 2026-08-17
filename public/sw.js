@@ -43,6 +43,27 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+
+  // v11: PWA share target — intercept the POST, stash the shared file in the
+  // Cache API, and redirect into the app where page.tsx picks it up. The file
+  // never leaves the device; the cache entry is deleted after one read.
+  if (request.method === 'POST' && new URL(request.url).pathname === '/share-target') {
+    event.respondWith((async () => {
+      try {
+        const form = await request.formData();
+        const file = form.get('pdf');
+        if (file && typeof file !== 'string') {
+          const cache = await caches.open('ce-share-target');
+          await cache.put('/share-target-file', new Response(file, {
+            headers: { 'x-file-name': encodeURIComponent(file.name || 'shared.pdf') }
+          }));
+        }
+      } catch (e) { /* fall through to plain redirect */ }
+      return Response.redirect('/?shared=1', 303);
+    })());
+    return;
+  }
+
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);

@@ -162,6 +162,51 @@ export default function Home() {
         showStatus(`🔗 Recipe loaded (${steps.length} steps) — drop a file to run it${params.get('autorun') === '1' ? ' automatically' : ''}`)
       })()
     }
+    // v11: browser-extension / share handoff — /?import=<url>
+    // The MV3 extension's context menu sends the PDF's URL here; we fetch the
+    // bytes straight into the browser (never through a server) and load them.
+    const importParam = params.get('import')
+    if (importParam) {
+      ;(async () => {
+        try {
+          const res = await fetch(importParam)
+          if (!res.ok) throw new Error(String(res.status))
+          const blob = await res.blob()
+          const name = decodeURIComponent(importParam.split('/').pop()?.split('?')[0] || 'imported.pdf') || 'imported.pdf'
+          const file = new File([blob], name.endsWith('.pdf') ? name : `${name}.pdf`, { type: 'application/pdf' })
+          handleFilesUploadRef.current?.([file])
+          showStatus(`📥 Imported ${file.name} from link`)
+        } catch {
+          showStatus('⚠ Could not fetch that PDF (the site blocks cross-origin reads). Download it, then drop it here.', 6000)
+        }
+      })()
+    }
+    // v11: PWA file handler — OS "Open with CommandEditor" / share target
+    ;(async () => {
+      try {
+        const lq = (navigator as any).launchQueue
+        if (lq && lq.setConsumer) {
+          lq.setConsumer(async (launchParams: any) => {
+            const handles: any[] = launchParams.files || []
+            const files: File[] = []
+            for (const h of handles) { try { files.push(await h.getFile()) } catch {} }
+            if (files.length) {
+              handleFilesUploadRef.current?.(files)
+              showStatus(`📂 Opened ${files[0].name} via file handler`)
+            }
+          })
+        }
+        // POST share_target: SW stashes the file, we pick it up here
+        if (params.get('shared') === '1') {
+          const { getShareTargetFile } = await import('@/utils/interop')
+          const shared = await getShareTargetFile()
+          if (shared) {
+            handleFilesUploadRef.current?.([shared])
+            showStatus(`📤 Received ${shared.name} from share`)
+          }
+        }
+      } catch {}
+    })()
     return () => {
       window.removeEventListener('beforeinstallprompt', pwaHandler)
       window.removeEventListener('beforeunload', unloadHandler)
@@ -177,6 +222,8 @@ export default function Home() {
 
   // Ref so keyboard handler can always call latest handleToolSelect
   const handleToolSelectRef = useRef<((tool: string) => void) | null>(null)
+  // Ref so mount-effect import paths can call the latest handleFilesUpload
+  const handleFilesUploadRef = useRef<((files: File[]) => void) | null>(null)
 
   // ── Global keyboard shortcuts ────────────────────────────────────────────
   useEffect(() => {
@@ -244,6 +291,8 @@ export default function Home() {
       } catch {}
     }
   }
+  // Ref used by the mount-effect import/file-handler paths (declared below)
+  handleFilesUploadRef.current = handleFilesUpload
 
   const handleToolSelect = (tool: string, clearResult = true) => {
     setSelectedTool(prev => {
@@ -445,7 +494,9 @@ export default function Home() {
       // v9 gap-filler pack
       'bates','custody','attachments','deduppages','a11yfix','listen',
       // v10 flexibility pack
-      'epub','summarize','translate','watchfolder','netaudit','policy']
+      'epub','summarize','translate','watchfolder','netaudit','policy',
+      // v11 moat pack
+      'collab']
     if (v6Tools.includes(command.action)) { handleToolSelect(command.action); return }
     if (uploadedFiles.length === 0) { showStatus('Upload a file first'); return }
     const toolTrigger = (window as any).__triggerToolAction
