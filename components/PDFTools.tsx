@@ -35,6 +35,7 @@ import NetworkAuditTool from '@/components/NetworkAuditTool'
 import CollabTool from '@/components/CollabTool'
 import FormFillTool from '@/components/FormFillTool'
 import MultiDocAITool from '@/components/MultiDocAITool'
+import RedlineTool from '@/components/RedlineTool'
 import { pdfToEpub, webdavUpload, saveToFolder, canUseFsAccess } from '@/utils/interop'
 import { summarizeOnDevice, translateOnDevice, TRANSLATION_PAIRS } from '@/utils/onDeviceAI'
 import { POLICY_PRESETS, getActivePolicy, setActivePolicy } from '@/utils/enterprise'
@@ -158,6 +159,7 @@ const TOOLS = [
   { id: 'formfill',    name: 'Form Intelli',fullName: 'Form Intelligence + Mail Merge',emoji:'📋', desc:'Detect fields, fill via CSV',requiresPDF:true, color:'#7c3aed',colorLight:'#ede9fe' },
   { id: 'multidoc',    name: 'Multi-Doc Q&A',fullName: 'Multi-Document AI Q&A',   emoji:'🧠', desc:'Ask across all PDFs',     requiresPDF:true,  color:'#be185d',colorLight:'#fce7f3' },
   { id: 'timetravel',  name: 'Time-Travel', fullName: 'Version Time-Travel',      emoji:'⏳', desc:'Restore any past version', requiresPDF:true,  color:'#a16207',colorLight:'#fef9c3' },
+  { id: 'redline',     name: 'Redline',     fullName: 'Negotiation Redline Mode', emoji:'✒️', desc:'Track-changes for PDF',   requiresPDF:true,  color:'#b91c1c',colorLight:'#fee2e2' },
 ]
 
 export default function PDFTools({
@@ -536,6 +538,12 @@ export default function PDFTools({
     if (toolId === 'timetravel') {
       if (!hasPDFs) { showStatus('Upload a PDF first'); return }
       onToolSelect('timetravel'); return
+    }
+
+    // v11: Negotiation Redline panel
+    if (toolId === 'redline') {
+      if (!hasPDFs) { showStatus('Upload a PDF first'); return }
+      onToolSelect('redline'); return
     }
 
     if (files.length === 0) { showStatus('Upload files first'); return }
@@ -4032,6 +4040,11 @@ export default function PDFTools({
       {/* ── v11: MULTI-DOCUMENT AI Q&A ──────────────────────────────────── */}
       {selectedTool === 'multidoc' && pdfFiles.length > 0 && (
         <MultiDocAITool files={pdfFiles} showStatus={showStatus} onClose={() => onToolSelect('')} />
+      )}
+
+      {/* ── v11: NEGOTIATION REDLINE ────────────────────────────────────── */}
+      {selectedTool === 'redline' && files.length > 0 && hasPDFs && (
+        <RedlineTool file={pdfFiles[0]} showStatus={showStatus} onClose={() => onToolSelect('')} />
       )}
 
       {/* ── v10: WATCH FOLDER ───────────────────────────────────────────── */}
