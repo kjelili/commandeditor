@@ -1,3 +1,19 @@
+# CommandEditor v11
+
+> **New in v11 — the moat release.** Twelve capabilities no competitor ships, each pushed as its own stage:
+> - 🧩 **Browser extension** (`extension/`) — right-click any PDF link → "Open in CommandEditor". MV3, zero host permissions, zero analytics, ~60 auditable lines. Plus PWA file handlers (OS "Open with") and share-target on mobile.
+> - 🤝 **Co-Review Rooms** — serverless WebRTC collaboration (Trystero): a 6-char code opens a P2P review room with live pins and accept/reject states. No account, no server, the PDF never travels the channel.
+> - 📋 **Form Intelligence** — detects ruled lines, boxes, checkboxes and "____" blanks in flat/scanned PDFs and synthesizes real AcroForm fields; then **CSV mail-merge** produces one filled PDF per row, zipped.
+> - 🧠 **Multi-Doc Q&A** — ask one question across a whole bundle of PDFs; on-device embeddings (MiniLM) retrieve with per-source page citations.
+> - ⏳ **Version Time-Travel** — every operation auto-snapshots its output to IndexedDB; restore any earlier state or diff its text against the latest.
+> - ✒️ **Redline Mode** — Word Track Changes for PDF: propose/accept/reject text edits, export a clean copy, a redlined copy, and a Markdown negotiation record.
+> - 📅 **Deadlines → Calendar** — finds every date in a contract/filing and exports an .ics with 1-day reminders for Google/Apple/Outlook.
+> - 🖼 **AI Alt-Text** — captions every embedded image with an on-device vision model; review, edit, and stamp into the PDF for screen readers.
+> - 👁 **Dyslexia Reflow** — re-typesets the document under the reader's rules (size, spacing, tinted paper, focus ruler, read-aloud) and exports an accessible PDF.
+> - 🎙 **Voice-Fill Forms** — walk through a form speaking the answers; on-device Whisper transcribes and fills each field. Hands-free.
+> - ⚓ **Blockchain Notarization** — OpenTimestamps anchoring: only the SHA-256 hash leaves the device, the proof is verifiable against Bitcoin forever.
+> - ⌨️ **Headless CLI** (`cli/`, `npx commandeditor`) — merge, split, rotate, pagenum, watermark, compress, hash, info for scripts and CI.
+
 # CommandEditor v10
 
 > **New in v10 — the flexibility release.** Every item on the competitive-gap list, shipped:
