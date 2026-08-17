@@ -32,7 +32,7 @@ export default function ReflowTool({ file, showStatus, onClose }: Props) {
   const [pages, setPages] = useState<string[] | null>(null)
   const [opts, setOpts] = useState<ReflowOptions>(DEFAULT_REFLOW)
   const [paper, setPaper] = useState<typeof PAPERS[number]>(PAPERS[0])
-  const [fontCss, setFontCss] = useState(FONTS[0].css)
+  const [fontCss, setFontCss] = useState<string>(FONTS[0].css)
   const [letterSpacing, setLetterSpacing] = useState(0.5)
   const [ruler, setRuler] = useState(true)
   const [rulerY, setRulerY] = useState(120)

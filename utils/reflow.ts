@@ -79,7 +79,7 @@ export async function buildReflowedPdf(pagesText: string[], opts: ReflowOptions)
         }
         page.drawText(line, {
           x: opts.margin, y: y - opts.fontSize,
-          size: opts.fontSize, font, wordSpacing: opts.wordSpacing,
+          size: opts.fontSize, font,
           color: rgb(0.12, 0.12, 0.12),
         })
         y -= lineAdvance
