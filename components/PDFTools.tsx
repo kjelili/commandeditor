@@ -39,6 +39,7 @@ import RedlineTool from '@/components/RedlineTool'
 import DeadlineTool from '@/components/DeadlineTool'
 import AltTextTool from '@/components/AltTextTool'
 import ReflowTool from '@/components/ReflowTool'
+import VoiceFillTool from '@/components/VoiceFillTool'
 import { pdfToEpub, webdavUpload, saveToFolder, canUseFsAccess } from '@/utils/interop'
 import { summarizeOnDevice, translateOnDevice, TRANSLATION_PAIRS } from '@/utils/onDeviceAI'
 import { POLICY_PRESETS, getActivePolicy, setActivePolicy } from '@/utils/enterprise'
@@ -166,6 +167,7 @@ const TOOLS = [
   { id: 'deadlineics', name: 'Deadlines',   fullName: 'Deadlines to Calendar',    emoji:'📅', desc:'Extract dates → .ics',    requiresPDF:true,  color:'#0369a1',colorLight:'#e0f2fe' },
   { id: 'alttext',     name: 'Alt-Text AI', fullName: 'AI Alt-Text Generator',    emoji:'🖼', desc:'Captions for screen readers',requiresPDF:true, color:'#7c2d12',colorLight:'#ffedd5' },
   { id: 'reflow',      name: 'Reflow',      fullName: 'Dyslexia-Friendly Reflow', emoji:'👁', desc:'Readable re-typesetting',  requiresPDF:true,  color:'#0e7490',colorLight:'#cffafe' },
+  { id: 'voicefill',   name: 'Voice-Fill',  fullName: 'Voice-Fill Forms',         emoji:'🎙', desc:'Speak answers into forms', requiresPDF:true,  color:'#dc2626',colorLight:'#fee2e2' },
 ]
 
 export default function PDFTools({
@@ -568,6 +570,12 @@ export default function PDFTools({
     if (toolId === 'reflow') {
       if (!hasPDFs) { showStatus('Upload a PDF first'); return }
       onToolSelect('reflow'); return
+    }
+
+    // v11: Voice-Fill Forms panel
+    if (toolId === 'voicefill') {
+      if (!hasPDFs) { showStatus('Upload a PDF first'); return }
+      onToolSelect('voicefill'); return
     }
 
     if (files.length === 0) { showStatus('Upload files first'); return }
@@ -4084,6 +4092,11 @@ export default function PDFTools({
       {/* ── v11: DYSLEXIA / LOW-VISION REFLOW ───────────────────────────── */}
       {selectedTool === 'reflow' && files.length > 0 && hasPDFs && (
         <ReflowTool file={pdfFiles[0]} showStatus={showStatus} onClose={() => onToolSelect('')} />
+      )}
+
+      {/* ── v11: VOICE-FILL FORMS ───────────────────────────────────────── */}
+      {selectedTool === 'voicefill' && files.length > 0 && hasPDFs && (
+        <VoiceFillTool file={pdfFiles[0]} showStatus={showStatus} onClose={() => onToolSelect('')} />
       )}
 
       {/* ── v10: WATCH FOLDER ───────────────────────────────────────────── */}

@@ -123,7 +123,7 @@ export type VoiceCommandType = {
         | 'toneanalyse' | 'langdetect' | 'citations' | 'fontinspect'
         | 'bates' | 'custody' | 'attachments' | 'deduppages' | 'a11yfix' | 'listen'
         | 'epub' | 'summarize' | 'translate' | 'watchfolder' | 'netaudit' | 'policy'
-        | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext' | 'reflow'
+        | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext' | 'reflow' | 'voicefill'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -449,6 +449,8 @@ const COMMAND_MAP: Array<{
     keywords: /(alt-? ?text|alternative text|caption.*image|image.*caption|screen reader|describe images)/i },
   { action: 'reflow' as any, label: 'Dyslexia-Friendly Reflow', emoji: '👁',
     keywords: /(reflow|dyslexi|low vision|readable|reading mode|easy read|bigger (text|font)|focus ruler)/i },
+  { action: 'voicefill' as any, label: 'Voice-Fill Forms', emoji: '🎙',
+    keywords: /(voice.?fill|speak.*form|fill.*(by|with) voice|dictate.*form|hands.?free|talk.*form)/i },
 
   // BATCH RULES
   { action: 'batchrules' as any, label: 'Batch Rules', emoji: '⚙️',

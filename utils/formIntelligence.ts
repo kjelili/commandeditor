@@ -268,3 +268,29 @@ export async function zipResults(results: MergeResult[]): Promise<Blob> {
   for (const r of results) zip.file(r.fileName, r.bytes)
   return zip.generateAsync({ type: 'blob' })
 }
+
+// ─── Direct value filling (voice-fill writes into this) ────────────────────
+
+export async function fillFormValues(
+  file: File,
+  fields: DetectedField[],
+  values: Record<string, string>,   // field.name → value
+): Promise<Uint8Array> {
+  const baseBytes = await createFillablePdf(file, fields)
+  const { PDFDocument, PDFCheckBox, PDFTextField } = await import('pdf-lib')
+  const doc = await PDFDocument.load(baseBytes, { ignoreEncryption: true })
+  const form = doc.getForm()
+  for (const f of fields) {
+    const value = (values[f.name] || '').trim()
+    if (!value) continue
+    try {
+      const fld = form.getField(f.name)
+      if (fld instanceof PDFCheckBox) {
+        if (/^(y|yes|true|1|x|checked|check)$/i.test(value)) fld.check()
+      } else if (fld instanceof PDFTextField) {
+        fld.setText(value)
+      }
+    } catch { /* skip */ }
+  }
+  return doc.save()
+}
