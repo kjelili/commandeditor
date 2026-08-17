@@ -50,6 +50,6 @@
     "canvas": "npm:empty-npm-package@1.0.0"
   },
   "engines": {
-    "node": "20.x || 22.x || 24.x"
+    "node": "22.x"
   }
 }
