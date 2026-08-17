@@ -32,6 +32,7 @@ import {
 import ListenTool from '@/components/ListenTool'
 import WatchFolderTool from '@/components/WatchFolderTool'
 import NetworkAuditTool from '@/components/NetworkAuditTool'
+import CollabTool from '@/components/CollabTool'
 import { pdfToEpub, webdavUpload, saveToFolder, canUseFsAccess } from '@/utils/interop'
 import { summarizeOnDevice, translateOnDevice, TRANSLATION_PAIRS } from '@/utils/onDeviceAI'
 import { POLICY_PRESETS, getActivePolicy, setActivePolicy } from '@/utils/enterprise'
@@ -150,6 +151,8 @@ const TOOLS = [
   { id: 'watchfolder', name: 'Watch Folder',fullName: 'Watch Folder Automation',  emoji:'👁', desc:'Hot-folder auto-process',requiresPDF:false,color:'#0369a1',colorLight:'#e0f2fe' },
   { id: 'netaudit',    name: 'No-Upload',   fullName: 'Proof of No Upload',       emoji:'🕵️', desc:'Live network audit',    requiresPDF:false, color:'#059669',colorLight:'#d1fae5' },
   { id: 'policy',      name: 'Policy',      fullName: 'Enterprise Policy Presets',emoji:'🏛', desc:'Legal/health/gov modes',requiresPDF:false, color:'#1c1917',colorLight:'#f5f5f4' },
+  // ── v11 MOAT PACK ───────────────────────────────────────────────────────
+  { id: 'collab',      name: 'Co-Review',   fullName: 'Co-Review Room (P2P)',     emoji:'🤝', desc:'Serverless collaboration',requiresPDF:true, color:'#0d9488',colorLight:'#ccfbf1' },
 ]
 
 export default function PDFTools({
@@ -504,6 +507,12 @@ export default function PDFTools({
     // v10 no-file tools must be reachable from an empty state
     if (['watchfolder', 'netaudit', 'policy'].includes(toolId)) {
       onToolSelect(toolId); return
+    }
+
+    // v11: Co-Review opens a panel around the currently loaded PDF
+    if (toolId === 'collab') {
+      if (!hasPDFs) { showStatus('Upload a PDF first'); return }
+      onToolSelect('collab'); return
     }
 
     if (files.length === 0) { showStatus('Upload files first'); return }
@@ -3985,6 +3994,11 @@ export default function PDFTools({
             </div>
           )}
         </div>
+      )}
+
+      {/* ── v11: CO-REVIEW ROOM (serverless P2P) ────────────────────────── */}
+      {selectedTool === 'collab' && files.length > 0 && hasPDFs && (
+        <CollabTool file={pdfFiles[0]} showStatus={showStatus} onClose={() => onToolSelect('')} />
       )}
 
       {/* ── v10: WATCH FOLDER ───────────────────────────────────────────── */}
