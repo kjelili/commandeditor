@@ -33,6 +33,7 @@ import ListenTool from '@/components/ListenTool'
 import WatchFolderTool from '@/components/WatchFolderTool'
 import NetworkAuditTool from '@/components/NetworkAuditTool'
 import CollabTool from '@/components/CollabTool'
+import FormFillTool from '@/components/FormFillTool'
 import { pdfToEpub, webdavUpload, saveToFolder, canUseFsAccess } from '@/utils/interop'
 import { summarizeOnDevice, translateOnDevice, TRANSLATION_PAIRS } from '@/utils/onDeviceAI'
 import { POLICY_PRESETS, getActivePolicy, setActivePolicy } from '@/utils/enterprise'
@@ -153,6 +154,7 @@ const TOOLS = [
   { id: 'policy',      name: 'Policy',      fullName: 'Enterprise Policy Presets',emoji:'🏛', desc:'Legal/health/gov modes',requiresPDF:false, color:'#1c1917',colorLight:'#f5f5f4' },
   // ── v11 MOAT PACK ───────────────────────────────────────────────────────
   { id: 'collab',      name: 'Co-Review',   fullName: 'Co-Review Room (P2P)',     emoji:'🤝', desc:'Serverless collaboration',requiresPDF:true, color:'#0d9488',colorLight:'#ccfbf1' },
+  { id: 'formfill',    name: 'Form Intelli',fullName: 'Form Intelligence + Mail Merge',emoji:'📋', desc:'Detect fields, fill via CSV',requiresPDF:true, color:'#7c3aed',colorLight:'#ede9fe' },
 ]
 
 export default function PDFTools({
@@ -513,6 +515,12 @@ export default function PDFTools({
     if (toolId === 'collab') {
       if (!hasPDFs) { showStatus('Upload a PDF first'); return }
       onToolSelect('collab'); return
+    }
+
+    // v11: Form Intelligence panel (detect → fillable → CSV merge)
+    if (toolId === 'formfill') {
+      if (!hasPDFs) { showStatus('Upload a PDF first'); return }
+      onToolSelect('formfill'); return
     }
 
     if (files.length === 0) { showStatus('Upload files first'); return }
@@ -3999,6 +4007,11 @@ export default function PDFTools({
       {/* ── v11: CO-REVIEW ROOM (serverless P2P) ────────────────────────── */}
       {selectedTool === 'collab' && files.length > 0 && hasPDFs && (
         <CollabTool file={pdfFiles[0]} showStatus={showStatus} onClose={() => onToolSelect('')} />
+      )}
+
+      {/* ── v11: FORM INTELLIGENCE + CSV MAIL MERGE ─────────────────────── */}
+      {selectedTool === 'formfill' && files.length > 0 && hasPDFs && (
+        <FormFillTool file={pdfFiles[0]} showStatus={showStatus} onClose={() => onToolSelect('')} />
       )}
 
       {/* ── v10: WATCH FOLDER ───────────────────────────────────────────── */}
