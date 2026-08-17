@@ -123,7 +123,7 @@ export type VoiceCommandType = {
         | 'toneanalyse' | 'langdetect' | 'citations' | 'fontinspect'
         | 'bates' | 'custody' | 'attachments' | 'deduppages' | 'a11yfix' | 'listen'
         | 'epub' | 'summarize' | 'translate' | 'watchfolder' | 'netaudit' | 'policy'
-        | 'collab' | 'formfill'
+        | 'collab' | 'formfill' | 'multidoc'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -437,6 +437,8 @@ const COMMAND_MAP: Array<{
     keywords: /(co-?review|collaborat|review room|share.*review|work together|team review|peer review|room code)/i },
   { action: 'formfill' as any, label: 'Form Intelligence', emoji: '📋',
     keywords: /(form intelligen|detect (form|field)|make.*fillable|fillable form|mail merge|csv merge|merge csv|fill.*from csv)/i },
+  { action: 'multidoc' as any, label: 'Multi-Doc Q&A', emoji: '🧠',
+    keywords: /(multi-?doc|all documents|across documents|ask (the|all|across)|search (all|every) (pdf|document)|whole (bundle|case|set))/i },
 
   // BATCH RULES
   { action: 'batchrules' as any, label: 'Batch Rules', emoji: '⚙️',

@@ -34,6 +34,7 @@ import WatchFolderTool from '@/components/WatchFolderTool'
 import NetworkAuditTool from '@/components/NetworkAuditTool'
 import CollabTool from '@/components/CollabTool'
 import FormFillTool from '@/components/FormFillTool'
+import MultiDocAITool from '@/components/MultiDocAITool'
 import { pdfToEpub, webdavUpload, saveToFolder, canUseFsAccess } from '@/utils/interop'
 import { summarizeOnDevice, translateOnDevice, TRANSLATION_PAIRS } from '@/utils/onDeviceAI'
 import { POLICY_PRESETS, getActivePolicy, setActivePolicy } from '@/utils/enterprise'
@@ -155,6 +156,7 @@ const TOOLS = [
   // ── v11 MOAT PACK ───────────────────────────────────────────────────────
   { id: 'collab',      name: 'Co-Review',   fullName: 'Co-Review Room (P2P)',     emoji:'🤝', desc:'Serverless collaboration',requiresPDF:true, color:'#0d9488',colorLight:'#ccfbf1' },
   { id: 'formfill',    name: 'Form Intelli',fullName: 'Form Intelligence + Mail Merge',emoji:'📋', desc:'Detect fields, fill via CSV',requiresPDF:true, color:'#7c3aed',colorLight:'#ede9fe' },
+  { id: 'multidoc',    name: 'Multi-Doc Q&A',fullName: 'Multi-Document AI Q&A',   emoji:'🧠', desc:'Ask across all PDFs',     requiresPDF:true,  color:'#be185d',colorLight:'#fce7f3' },
 ]
 
 export default function PDFTools({
@@ -521,6 +523,12 @@ export default function PDFTools({
     if (toolId === 'formfill') {
       if (!hasPDFs) { showStatus('Upload a PDF first'); return }
       onToolSelect('formfill'); return
+    }
+
+    // v11: Multi-document Q&A panel (uses every uploaded PDF)
+    if (toolId === 'multidoc') {
+      if (!hasPDFs) { showStatus('Upload one or more PDFs first'); return }
+      onToolSelect('multidoc'); return
     }
 
     if (files.length === 0) { showStatus('Upload files first'); return }
@@ -4012,6 +4020,11 @@ export default function PDFTools({
       {/* ── v11: FORM INTELLIGENCE + CSV MAIL MERGE ─────────────────────── */}
       {selectedTool === 'formfill' && files.length > 0 && hasPDFs && (
         <FormFillTool file={pdfFiles[0]} showStatus={showStatus} onClose={() => onToolSelect('')} />
+      )}
+
+      {/* ── v11: MULTI-DOCUMENT AI Q&A ──────────────────────────────────── */}
+      {selectedTool === 'multidoc' && pdfFiles.length > 0 && (
+        <MultiDocAITool files={pdfFiles} showStatus={showStatus} onClose={() => onToolSelect('')} />
       )}
 
       {/* ── v10: WATCH FOLDER ───────────────────────────────────────────── */}
