@@ -123,7 +123,7 @@ export type VoiceCommandType = {
         | 'toneanalyse' | 'langdetect' | 'citations' | 'fontinspect'
         | 'bates' | 'custody' | 'attachments' | 'deduppages' | 'a11yfix' | 'listen'
         | 'epub' | 'summarize' | 'translate' | 'watchfolder' | 'netaudit' | 'policy'
-        | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext'
+        | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext' | 'reflow'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -447,6 +447,8 @@ const COMMAND_MAP: Array<{
     keywords: /(deadline|due date|calendar|ics|add to calendar|extract dates|important dates|court date)/i },
   { action: 'alttext' as any, label: 'AI Alt-Text', emoji: '🖼',
     keywords: /(alt-? ?text|alternative text|caption.*image|image.*caption|screen reader|describe images)/i },
+  { action: 'reflow' as any, label: 'Dyslexia-Friendly Reflow', emoji: '👁',
+    keywords: /(reflow|dyslexi|low vision|readable|reading mode|easy read|bigger (text|font)|focus ruler)/i },
 
   // BATCH RULES
   { action: 'batchrules' as any, label: 'Batch Rules', emoji: '⚙️',
