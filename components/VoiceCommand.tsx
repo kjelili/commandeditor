@@ -123,7 +123,7 @@ export type VoiceCommandType = {
         | 'toneanalyse' | 'langdetect' | 'citations' | 'fontinspect'
         | 'bates' | 'custody' | 'attachments' | 'deduppages' | 'a11yfix' | 'listen'
         | 'epub' | 'summarize' | 'translate' | 'watchfolder' | 'netaudit' | 'policy'
-        | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext' | 'reflow' | 'voicefill'
+        | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext' | 'reflow' | 'voicefill' | 'notarize'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -451,6 +451,8 @@ const COMMAND_MAP: Array<{
     keywords: /(reflow|dyslexi|low vision|readable|reading mode|easy read|bigger (text|font)|focus ruler)/i },
   { action: 'voicefill' as any, label: 'Voice-Fill Forms', emoji: '🎙',
     keywords: /(voice.?fill|speak.*form|fill.*(by|with) voice|dictate.*form|hands.?free|talk.*form)/i },
+  { action: 'notarize' as any, label: 'Notarize (Bitcoin)', emoji: '⚓',
+    keywords: /(notari[sz]e|opentimestamps|blockchain|proof of existence|timestamp proof|anchor|prove (it|this) existed)/i },
 
   // BATCH RULES
   { action: 'batchrules' as any, label: 'Batch Rules', emoji: '⚙️',
