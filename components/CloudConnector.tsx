@@ -355,36 +355,32 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     setIsLoading(true);
     setErrorMsg('');
     try {
-      // Walk folders via /children instead of search(): search only returns
-      // files Microsoft has *indexed*, so recent uploads are missed. Traversal
-      // finds every PDF, newest first.
+      // delta enumerates the whole drive in flat pages (a couple of calls, not
+      // one-per-folder like a walk) so listing is fast even with many folders,
+      // and unlike search() it isn't limited to indexed files.
       const headers = { Authorization: `Bearer ${auth.accessToken}` };
-      const select = '$top=200&$select=id,name,size,lastModifiedDateTime,folder,file';
+      let next: string | null = 'https://graph.microsoft.com/v1.0/me/drive/root/delta';
       const collected: any[] = [];
-      const queue: string[] = ['root'];
-      let calls = 0;
-      while (queue.length && calls < 60) {
-        const id = queue.shift()!;
-        let next: string | null = id === 'root'
-          ? `https://graph.microsoft.com/v1.0/me/drive/root/children?${select}`
-          : `https://graph.microsoft.com/v1.0/me/drive/items/${id}/children?${select}`;
-        while (next && calls < 60) {
-          const res: Response = await fetch(next, { headers });
-          calls++;
-          if (!res.ok) {
-            const t = await res.text();
-            let msg = t; try { msg = JSON.parse(t).error?.message || t; } catch {}
-            setErrorMsg(`OneDrive couldn't list files: ${msg}`);
-            setFiles([]);
-            return;
-          }
-          const data: any = await res.json();
-          for (const item of data.value || []) {
-            if (item.folder) queue.push(item.id);
-            else if (item.name?.toLowerCase().endsWith('.pdf')) collected.push(item);
-          }
-          next = data['@odata.nextLink'] || null;
+      const seen = new Set<string>();
+      let pages = 0;
+      while (next && pages < 25) {
+        const res: Response = await fetch(next, { headers });
+        pages++;
+        if (!res.ok) {
+          const t = await res.text();
+          let msg = t; try { msg = JSON.parse(t).error?.message || t; } catch {}
+          setErrorMsg(`OneDrive couldn't list files: ${msg}`);
+          setFiles([]);
+          return;
         }
+        const data: any = await res.json();
+        for (const item of data.value || []) {
+          if (item.file && !item.deleted && item.name?.toLowerCase().endsWith('.pdf') && !seen.has(item.id)) {
+            seen.add(item.id);
+            collected.push(item);
+          }
+        }
+        next = data['@odata.nextLink'] || null; // deltaLink (no nextLink) ends the loop
       }
       const mapped: CloudFile[] = collected
         .map((f: any) => ({
