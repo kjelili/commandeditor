@@ -12,7 +12,7 @@ interface Step {
 
 const STEPS: Step[] = [
   { target: '#upload-zone', title: 'Upload your file', body: 'Drop a PDF, image, Word doc, or any supported file here — or click "Choose Files". Your file never leaves your device.', position: 'bottom', emoji: '📂' },
-  { target: '#tool-grid', title: 'Pick a tool', body: 'Choose from 50+ tools. Search by name, or press a letter key (M = Merge, C = Compress…). Hover any tool for a description.', position: 'top', emoji: '🔧' },
+  { target: '#tool-grid', title: 'Pick a tool', body: 'Choose from 110+ tools. Search by name, or press a letter key (M = Merge, C = Compress…). Hover any tool for a description.', position: 'top', emoji: '🔧' },
   { target: '#pdf-viewer-section', title: 'Preview & interact', body: 'Pages appear here. Click to select, drag to reorder, hover for rotate/delete buttons. Use the search bar to find text.', position: 'top', emoji: '👁' },
   { target: '#download-btn', title: 'Download your result', body: 'Your processed file appears here. Rename it before downloading, or press Ctrl+S. The file is only on your device.', position: 'top', emoji: '⬇️' },
   { target: '#voice-btn', title: 'Voice commands', body: 'Click the mic and say things like "compress", "merge", or "make it grayscale". Supports accents and natural phrasing.', position: 'left', emoji: '🎙️' },

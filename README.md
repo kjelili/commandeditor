@@ -1,6 +1,6 @@
 # CommandEditor
 
-> A private, browser-based PDF & document toolkit — **90+ tools, on-device AI, cryptographic e-signatures, and 50+ voice commands**. No uploads, no accounts, no servers. Every byte stays on your device.
+> A private, browser-based PDF & document toolkit — **110+ tools, on-device AI, cryptographic e-signatures, and 60+ voice commands**. No uploads, no accounts, no servers. Every byte stays on your device.
 
 [Deploy to Vercel](DEPLOY-TO-VERCEL.md) · [Launch checklist](LAUNCH_CHECKLIST.md)
 
@@ -104,12 +104,21 @@ NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
 | **Flatten** | Rasterise all annotations, form fields, and overlays into pixels |
 | **Grayscale** | Strip all colour, reduce ink usage, shrink file size |
 | **Normalise Page Sizes** | Detect mixed page dimensions; unify all pages to A4, US Letter, or A3 |
+| **Reverse Page Order** | Flip page order — last page first. Rescues face-down scanner output |
+| **Remove Blank Pages** | Detect pages with no text, images, or vector content and remove them |
+| **Interleave / Duplex Fix** | Merge front-page and back-page scan passes into one correctly ordered document |
+| **Split by Bookmarks** | Split a PDF at its top-level outline entries into one file per chapter (ZIP) |
+| **Scale / Resize Pages** | Scale content and page box by percentage, or fit every page to A4 or US Letter |
+| **Bookmarks Import / Export** | Export the PDF outline to JSON; import a JSON outline into any PDF |
+| **Repair PDF** | Recover damaged files: byte-level cleanup + structure rebuild, with page rasterisation as fallback |
 
 ### Conversion
 
 | Tool | What it does |
 |------|-------------|
 | **PDF → Image** | Export pages as PNG, JPEG, or WebP |
+| **Scan to PDF** | Capture paper pages with the device camera (or upload photos), apply colour/grayscale/document-B&W filters, build a multi-page A4 PDF |
+| **Form Data Extractor** | Read every filled AcroForm field (text, checkboxes, dropdowns, radio groups) and export values as CSV or JSON |
 | **PDF → Word** | Convert to editable .docx (text layer preserved) |
 | **PDF → Excel / CSV** | Extract tables and structured data |
 | **PDF → PowerPoint** | Convert slides-as-pages to editable .pptx |
@@ -124,8 +133,9 @@ NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
 | Tool | What it does |
 |------|-------------|
 | **AES-256 Encrypt** | True file encryption using Web Crypto API (PBKDF2 + AES-GCM). Not PDF password protection — the file itself is encrypted |
-| **Password Protect** | Add open/owner passwords to a PDF |
+| **Password Protect** | Add a real PDF open-password with the native 128-bit Standard security handler (pure-JS MD5/RC4 implementation). Every reader prompts on open; permissions (print/copy/edit/annotate) are configurable |
 | **Unlock PDF** | Remove a known password from a PDF |
+| **Sanitize Document** | One-click strip of hidden data: metadata, XMP streams, JavaScript, auto-run actions, embedded files, XFA form data, page thumbnails, comments (links preserved) |
 | **Redact** | Draw black-out rectangles over sensitive content on any page |
 | **Tamper-Evident Seal** | Generate a SHA-256 + timestamp cryptographic certificate for a file. Download as JSON, verify any time by dropping the file back in |
 | **File Hash (SHA-256)** | Compute and display the SHA-256 hash of any file for integrity verification |
@@ -135,6 +145,7 @@ NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
 | Tool | What it does |
 |------|-------------|
 | **Annotate** | Add text, freehand pen, highlights, lines, and rectangles directly on PDF pages |
+| **Link Editor** | List, add (positioned, percentage-based), or strip clickable hyperlinks |
 | **Sign** | Type, draw, or upload a signature and place it on any page |
 | **Add Image** | Insert a logo, photo, or stamp onto a page |
 | **Add QR Code** | Embed a scannable QR code linked to any URL |
@@ -180,6 +191,9 @@ NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
 | **Ink Coverage Estimator** | Renders each page to canvas and measures non-white pixel ratio. Shows per-page coverage percentage and estimated print cost in USD |
 | **Print Preflight (PDF/X)** | Checks fonts, colour mode, resolution, bleed, and trim box against commercial print standards (ISO 15930 / PDF/X) |
 | **Poster / Tile Print** | Tiles a single page across an N×M grid of A4 sheets with crop marks and alignment guides — for large-format printing without a plotter |
+| **N-up Handout Layout** | Place 2, 4, 6, or 9 pages per sheet — handouts and compact review copies |
+| **Booklet Imposition** | Saddle-stitch page reordering: print double-sided (flip on short edge), fold, staple. Auto-pads to multiples of 4 |
+| **Contact Sheet Export** | Render every page as a thumbnail grid on A4-landscape sheets for visual review |
 
 ### Analysis and comparison
 
@@ -216,7 +230,7 @@ NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
 
 CommandEditor includes a comprehensive voice command system supporting natural language and accent variants. Click the microphone button and speak.
 
-**50+ commands across the full tool set**, including:
+**60+ commands across the full tool set**, including:
 
 | Say | Action |
 |-----|--------|
@@ -391,7 +405,7 @@ Features planned but not yet implemented:
 - **v9 — the gap-filler release.** True offline (service worker + local pdf.js), typed commands in every browser, Listen-to-PDF, Bates numbering, chain-of-custody log, attachment extractor, duplicate-page finder, accessibility auto-fixer.
 - **v8 — modules pack.** Auto-redact, Smart TOC, Barcode & QR, Annotation Layers, Batch Engine v2, Plugin SDK, Smart Profiler, legal/finance extraction, fingerprinting, print-to-PDF, time-locked documents.
 - **v7 — enhancement pack.** In-place editing, AI assistant, e-signatures, form builder, Visual Diff, cloud storage.
-- **v6 — foundation.** 50+ tools, 50+ voice commands, zero servers.
+- **v6 — foundation.** 50+ tools, 60+ voice commands, zero servers.
 
 ---
 

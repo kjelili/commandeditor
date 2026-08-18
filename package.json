@@ -1,7 +1,7 @@
 {
   "name": "commandeditor",
   "version": "1.0.0",
-  "description": "Voice-controlled PDF and document toolkit. 50+ tools that run entirely in the browser. No uploads, no sign-up, free forever.",
+  "description": "Voice-controlled PDF and document toolkit. 110+ tools that run entirely in the browser. No uploads, no sign-up, free forever.",
   "homepage": "https://commandeditor.com",
   "private": true,
   "scripts": {

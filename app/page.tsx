@@ -655,8 +655,8 @@ export default function Home() {
             </h1>
             <p className="text-lg md:text-xl mb-10 max-w-xl animate-fade-up"
                style={{ color: 'rgba(255,255,255,0.75)', animationDelay: '0.16s', lineHeight: 1.7 }}>
-              85+ tools in one private toolkit — now with an on-device AI assistant, cryptographic
-              e-signatures, document fingerprinting, and 50+ hands-free voice commands.
+              110+ tools in one private toolkit — now with an on-device AI assistant, cryptographic
+              e-signatures, document fingerprinting, and 60+ hands-free voice commands.
               Everything runs in your browser. Your documents never touch a server.
             </p>
             <div className="flex flex-wrap items-center gap-4 animate-fade-up" style={{ animationDelay: '0.24s' }}>
@@ -672,7 +672,7 @@ export default function Home() {
               </button>
             </div>
             <div className="flex flex-wrap gap-10 mt-16 animate-fade-up" style={{ animationDelay: '0.32s' }}>
-              {[{ val: '85+', label: 'PDF tools' }, { val: '50+', label: 'Voice commands' }, { val: '0', label: 'Server uploads' }, { val: '∞', label: 'File size limit' }].map(s => (
+              {[{ val: '110+', label: 'PDF tools' }, { val: '60+', label: 'Voice commands' }, { val: '0', label: 'Server uploads' }, { val: '∞', label: 'File size limit' }].map(s => (
                 <div key={s.label}>
                   <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'Syne, sans-serif', background: 'linear-gradient(90deg, white, var(--blue-glow))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{s.val}</div>
                   <div className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{s.label}</div>
@@ -1154,7 +1154,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <p className="section-label mb-3">Everything included</p>
-            <h2 className="text-4xl md:text-5xl mb-4">85+ tools. Zero cost.</h2>
+            <h2 className="text-4xl md:text-5xl mb-4">110+ tools. Zero cost.</h2>
             <p className="text-base max-w-xl mx-auto" style={{ color: 'var(--ink-muted)' }}>
               Every tool runs entirely in your browser. No sign-up, no subscriptions, no limits.
             </p>

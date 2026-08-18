@@ -127,7 +127,7 @@ export default function HeroSection({ hasFiles }: HeroSectionProps) {
 
           {/* Sub-headline */}
           <p className="body-lg text-white/65 max-w-2xl mb-10 animate-in delay-200">
-            The first voice-controlled PDF toolkit — 50+ hands-free commands and 50+ tools.
+            The first voice-controlled PDF toolkit — 60+ hands-free commands and 110+ tools.
             Everything processes locally in your browser — your files never leave your device.
           </p>
 
