@@ -29,6 +29,10 @@ import {
   extractEmbeddedAttachments, findDuplicatePages, removePagesPDF,
   autoFixAccessibility, BatesOptions, CustodyEntry, AttachmentInfo, DupeGroup, A11yFixReport
 } from '@/utils/gapFillers'
+import {
+  reversePageOrder, findBlankPages, removePagesByIndex,
+  interleavePDFs, splitPDFByBookmarks
+} from '@/utils/pageOps'
 import ListenTool from '@/components/ListenTool'
 import WatchFolderTool from '@/components/WatchFolderTool'
 import NetworkAuditTool from '@/components/NetworkAuditTool'
@@ -93,6 +97,10 @@ const TOOLS = [
   { id: 'grayscale',   name: 'Grayscale',   fullName: 'Convert to Grayscale', emoji: '⬜', desc: 'Remove colour',    requiresPDF: true,   color: '#374151', colorLight: '#f3f4f6' },
   { id: 'insertpage',  name: 'Insert Page', fullName: 'Insert / Duplicate Page',emoji:'➕',desc: 'Add blank or copy', requiresPDF: true,  color: '#059669', colorLight: '#d1fae5' },
   { id: 'splitn',      name: 'Split by N',  fullName: 'Split Every N Pages',  emoji: '📄', desc: 'Equal chunks',     requiresPDF: true,   color: '#7c3aed', colorLight: '#ede9fe' },
+  { id: 'reverse',     name: 'Reverse',     fullName: 'Reverse Page Order',   emoji: '⇄',  desc: 'Last page first', requiresPDF: true,   color: '#475569', colorLight: '#f1f5f9' },
+  { id: 'rmblank',     name: 'De-Blank',    fullName: 'Remove Blank Pages',   emoji: '🗑', desc: 'Drop empty pages', requiresPDF: true,   color: '#dc2626', colorLight: '#fee2e2' },
+  { id: 'interleave',  name: 'Interleave',  fullName: 'Interleave / Duplex Fix', emoji: '🔀', desc: 'Front+back scans', requiresPDF: true, color: '#0d9488', colorLight: '#ccfbf1' },
+  { id: 'splitbm',     name: 'Split TOC',   fullName: 'Split by Bookmarks',   emoji: '📑', desc: 'Chapter files',   requiresPDF: true,    color: '#7c3aed', colorLight: '#ede9fe' },
   { id: 'topptx',      name: 'PDF→PPTX',    fullName: 'PDF to PowerPoint',    emoji: '📊', desc: 'Slides from PDF',  requiresPDF: true,   color: '#ea580c', colorLight: '#ffedd5' },
   { id: 'hashcheck',   name: 'File Hash',   fullName: 'File Integrity (SHA-256)',emoji:'🔑',desc:'Verify integrity', requiresPDF: false,  color: '#6366f1', colorLight: '#e0e7ff' },
   { id: 'ocr',         name: 'OCR',         fullName: 'OCR — Make Searchable',    emoji:'🔎',desc:'Scan to text',     requiresPDF: true,   color: '#0891b2', colorLight: '#cffafe' },
@@ -284,6 +292,8 @@ export default function PDFTools({
   const [readabilityLoading, setReadabilityLoading] = useState(false)
   // PDF Compare
   const [compareFile, setCompareFile] = useState<File|null>(null)
+  const [interleaveFile, setInterleaveFile] = useState<File|null>(null)
+  const [interleaveReverse, setInterleaveReverse] = useState(true)
   const [compareResult, setCompareResult] = useState<any>(null)
   const [compareLoading, setCompareLoading] = useState(false)
   // Accessibility
@@ -645,6 +655,57 @@ export default function PDFTools({
         pushUndo(blob)
         onProcessingComplete(blob, toolId)
       } catch (e: any) { showStatus(e.message || 'Rotate failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    // ── Stage 1 page-op gap-fillers ─────────────────────────────────────────
+    if (toolId === 'reverse') {
+      if (!hasPDFs) { showStatus('Upload a PDF to reverse'); return }
+      onProcessingStart()
+      try {
+        const blob = await reversePageOrder(pdfFiles[0])
+        pushUndo(blob)
+        onProcessingComplete(blob, toolId)
+      } catch (e: any) { showStatus(e.message || 'Reverse failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'rmblank') {
+      if (!hasPDFs) { showStatus('Upload a PDF to clean'); return }
+      onProcessingStart()
+      try {
+        showStatus('Scanning for blank pages…')
+        const blanks = await findBlankPages(pdfFiles[0])
+        if (blanks.length === 0) { onProcessingComplete(new Blob()); showStatus('No blank pages found — nothing to remove'); return }
+        const blob = await removePagesByIndex(pdfFiles[0], blanks)
+        pushUndo(blob)
+        onProcessingComplete(blob, toolId)
+        showStatus(`✓ Removed ${blanks.length} blank page${blanks.length > 1 ? 's' : ''} (page${blanks.length > 1 ? 's' : ''} ${blanks.map(i => i + 1).join(', ')})`)
+      } catch (e: any) { showStatus(e.message || 'Blank-page scan failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'interleave') {
+      if (!hasPDFs) { showStatus('Upload the front-pages PDF first'); return }
+      if (!interleaveFile) { showStatus('Pick the back-pages PDF in the panel below'); onToolSelect('interleave'); return }
+      onProcessingStart()
+      try {
+        const blob = await interleavePDFs(pdfFiles[0], interleaveFile, interleaveReverse)
+        pushUndo(blob)
+        onProcessingComplete(blob, toolId)
+      } catch (e: any) { showStatus(e.message || 'Interleave failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'splitbm') {
+      if (!hasPDFs) { showStatus('Upload a PDF with bookmarks'); return }
+      onProcessingStart()
+      try {
+        const res = await splitPDFByBookmarks(pdfFiles[0], (d, t) => onProgress?.(d, t))
+        if (!res) { onProcessingComplete(new Blob()); showStatus('No usable bookmarks found — this PDF has no outline to split on'); return }
+        onProcessingComplete(res.blob, toolId)
+        showStatus(`✓ Split into ${res.chapters} chapter files (ZIP)`)
+      } catch (e: any) { showStatus(e.message || 'Split by bookmarks failed'); onProcessingComplete(new Blob()) }
       return
     }
 
@@ -1840,6 +1901,10 @@ export default function PDFTools({
               split: 'Select pages in the preview below, then extract them as a new PDF.',
               compress: 'Reduce file size by re-rendering pages at lower quality. Great for emailing.',
               unlock: 'Remove a password from an encrypted PDF. You must know the current password.',
+              reverse: 'Flips the page order — last page becomes first. Rescues face-down scanner output.',
+              rmblank: 'Detects pages with no text, images, or drawings and removes them. Conservative: vector-only pages are kept.',
+              interleave: 'Merges front-page and back-page scans into one correctly ordered document — the classic duplex-scanner rescue.',
+              splitbm: 'Splits the PDF at its top-level bookmarks into one file per chapter, delivered as a ZIP.',
               headfoot: 'Add custom text to the top/bottom of every page. Supports {page}, {total}, {date}.',
               grayscale: 'Convert all colours to greyscale. Reduces file size and saves printer ink.',
               insertpage: 'Insert a blank or duplicate page at any position in the document.',
@@ -3254,6 +3319,29 @@ export default function PDFTools({
           {!readabilityResult && !readabilityLoading && (
             <button onClick={() => handleToolAction('readability')} className="btn-primary w-full">📖 Analyse Readability</button>
           )}
+        </div>
+      )}
+
+      {/* ── INTERLEAVE / DUPLEX FIX ──────────────────────────────────────── */}
+      {selectedTool === 'interleave' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">🔀</span>
+            <div><p className="font-semibold text-sm">Interleave / Duplex Fix</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Merge front-page and back-page scans into one ordered document</p></div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold block mb-1" style={{color:'var(--ink-muted)'}}>Back-pages PDF (uploaded file above = front pages):</label>
+            <input type="file" accept=".pdf" onChange={e => setInterleaveFile(e.target.files?.[0]||null)}
+                   className="text-xs w-full" style={{color:'var(--ink)'}}/>
+          </div>
+          <label className="flex items-center gap-2 text-xs" style={{color:'var(--ink)'}}>
+            <input type="checkbox" checked={interleaveReverse} onChange={e => setInterleaveReverse(e.target.checked)} />
+            Reverse back pages (typical when the stack was flipped for the second pass)
+          </label>
+          {interleaveFile && <p className="text-xs" style={{color:'var(--ink-muted)'}}>Interleaving: <b>{pdfFiles[0]?.name}</b> ⇄ <b>{interleaveFile.name}</b></p>}
+          <button onClick={() => handleToolAction('interleave')} disabled={!interleaveFile}
+                  className="btn-primary w-full" style={{background:'#0d9488'}}>
+            🔀 Interleave Pages
+          </button>
         </div>
       )}
 

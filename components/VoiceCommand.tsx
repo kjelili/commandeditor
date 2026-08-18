@@ -124,6 +124,7 @@ export type VoiceCommandType = {
         | 'bates' | 'custody' | 'attachments' | 'deduppages' | 'a11yfix' | 'listen'
         | 'epub' | 'summarize' | 'translate' | 'watchfolder' | 'netaudit' | 'policy'
         | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext' | 'reflow' | 'voicefill' | 'notarize'
+        | 'reverse' | 'rmblank' | 'interleave' | 'splitbm'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -175,6 +176,24 @@ const COMMAND_MAP: Array<{
   {
     action: 'split', label: 'Split PDF', emoji: '✂',
     keywords: /\b(split|splet|spleet|spliit|separate|separat|separeit|separrate|divide|division|cut( up| apart)?|break( up| apart)?|extract pages?|pull apart|detach|isolate|partition|segment|section|slice|chop|carve|sever|take out pages?|remove pages?|get page|pull out)\b/i,
+  },
+
+  // ── STAGE 1 PAGE OPS ──────────────────────────────────────────────────────
+  {
+    action: 'reverse', label: 'Reverse page order', emoji: '⇄',
+    keywords: /\b(reverse (page )?order|reverse pages?|flip (the )?(page )?order|backwards pages?|last page first|invert order)\b/i,
+  },
+  {
+    action: 'rmblank', label: 'Remove blank pages', emoji: '🗑',
+    keywords: /\b(remove|delete|drop|strip|clean)( blank| empty) pages?\b|deblank|de-blank/i,
+  },
+  {
+    action: 'interleave', label: 'Interleave scans', emoji: '🔀',
+    keywords: /\b(interleave|interleave pages?|duplex fix|shuffle pages?|zip pages?|combine scans?|front and back|merge scans?)\b/i,
+  },
+  {
+    action: 'splitbm', label: 'Split by bookmarks', emoji: '📑',
+    keywords: /\b(split (by|on|at) (bookmarks?|chapters?|outline|toc|table of contents)|chapter split|split into chapters?)\b/i,
   },
 
   // ── COMPRESS ─────────────────────────────────────────────────────────────
