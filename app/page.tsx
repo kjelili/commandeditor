@@ -50,6 +50,10 @@ const TOOL_SUFFIX: Record<string, string> = {
   repair: 'repaired',
   protect: 'protected',
   sanitize: 'sanitized',
+  scalepages: 'scaled',
+  linkedit: 'with-links',
+  contactsheet: 'contact-sheet',
+  bookmarkio: 'bookmarks',
   compress: 'compressed',
   rotate: 'rotated',
   crop: 'cropped',
@@ -1007,6 +1011,7 @@ export default function Home() {
                 const ext = f.type.includes('zip') ? '.zip'
                   : f.type.includes('presentation') ? '.pptx'
                   : f.type.includes('csv') ? '.csv'
+                  : f.type.includes('json') ? '.json'
                   : f.type.includes('octet-stream') ? '.enc'
                   : '.pdf'
                 const url = URL.createObjectURL(f)

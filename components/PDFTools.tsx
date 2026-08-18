@@ -34,6 +34,10 @@ import {
   interleavePDFs, splitPDFByBookmarks
 } from '@/utils/pageOps'
 import { repairPDF, RepairMode } from '@/utils/repairPdf'
+import {
+  scalePDFPages, listPDFLinks, removePDFLinks, addPDFLink,
+  contactSheetPDF, exportBookmarks, importBookmarks, PdfLink, BookmarkItem
+} from '@/utils/docTools'
 import ListenTool from '@/components/ListenTool'
 import WatchFolderTool from '@/components/WatchFolderTool'
 import NetworkAuditTool from '@/components/NetworkAuditTool'
@@ -105,6 +109,10 @@ const TOOLS = [
   { id: 'rmblank',     name: 'De-Blank',    fullName: 'Remove Blank Pages',   emoji: '🗑', desc: 'Drop empty pages', requiresPDF: true,   color: '#dc2626', colorLight: '#fee2e2' },
   { id: 'interleave',  name: 'Interleave',  fullName: 'Interleave / Duplex Fix', emoji: '🔀', desc: 'Front+back scans', requiresPDF: true, color: '#0d9488', colorLight: '#ccfbf1' },
   { id: 'splitbm',     name: 'Split TOC',   fullName: 'Split by Bookmarks',   emoji: '📑', desc: 'Chapter files',   requiresPDF: true,    color: '#7c3aed', colorLight: '#ede9fe' },
+  { id: 'scalepages',  name: 'Scale Pages', fullName: 'Scale / Resize Pages', emoji: '🔍', desc: 'Percent or A4/Letter', requiresPDF: true, color: '#0369a1', colorLight: '#e0f2fe' },
+  { id: 'linkedit',    name: 'Links',       fullName: 'Link Editor',          emoji: '🔗', desc: 'Add/remove links', requiresPDF: true,   color: '#0891b2', colorLight: '#cffafe' },
+  { id: 'contactsheet',name: 'Contact Sheet',fullName: 'Contact Sheet Export',emoji: '🎞', desc: 'Thumbnail overview', requiresPDF: true,  color: '#374151', colorLight: '#f3f4f6' },
+  { id: 'bookmarkio',  name: 'BM Import/Export', fullName: 'Bookmarks Import / Export', emoji: '📥', desc: 'JSON outline transfer', requiresPDF: true, color: '#b45309', colorLight: '#fef3c7' },
   { id: 'topptx',      name: 'PDF→PPTX',    fullName: 'PDF to PowerPoint',    emoji: '📊', desc: 'Slides from PDF',  requiresPDF: true,   color: '#ea580c', colorLight: '#ffedd5' },
   { id: 'hashcheck',   name: 'File Hash',   fullName: 'File Integrity (SHA-256)',emoji:'🔑',desc:'Verify integrity', requiresPDF: false,  color: '#6366f1', colorLight: '#e0e7ff' },
   { id: 'ocr',         name: 'OCR',         fullName: 'OCR — Make Searchable',    emoji:'🔎',desc:'Scan to text',     requiresPDF: true,   color: '#0891b2', colorLight: '#cffafe' },
@@ -304,6 +312,12 @@ export default function PDFTools({
   const [protectPerms, setProtectPerms] = useState({ print: true, copy: false, modify: false, annotate: true })
   const [sanitizeOpts, setSanitizeOpts] = useState({ metadata: true, javascript: true, embeddedFiles: true, annotations: true, formData: true, thumbnails: true })
   const [sanitizeReport, setSanitizeReport] = useState<string[] | null>(null)
+  const [scaleMode, setScaleMode] = useState<'percent' | 'fitA4' | 'fitLetter'>('percent')
+  const [scalePercent, setScalePercent] = useState(100)
+  const [linkList, setLinkList] = useState<PdfLink[] | null>(null)
+  const [linkForm, setLinkForm] = useState({ page: 1, url: '', x: 10, y: 10, w: 30, h: 5 })
+  const [contactCols, setContactCols] = useState(4)
+  const [bmImportFile, setBmImportFile] = useState<File | null>(null)
   const [compareResult, setCompareResult] = useState<any>(null)
   const [compareLoading, setCompareLoading] = useState(false)
   // Accessibility
@@ -765,6 +779,104 @@ export default function PDFTools({
         setSanitizeReport(res.removed)
         showStatus(`✓ Sanitized — removed: ${res.removed.slice(0, 3).join('; ')}${res.removed.length > 3 ? ` +${res.removed.length - 3} more` : ''}`)
       } catch (e: any) { showStatus(e.message || 'Sanitize failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    // ── Stage 5: Scale / Link Editor / Contact Sheet / Bookmark IO ──────────
+    if (toolId === 'scalepages') {
+      if (!hasPDFs) { showStatus('Upload a PDF to scale'); return }
+      onProcessingStart()
+      try {
+        const opts = scaleMode === 'percent'
+          ? { mode: 'percent' as const, percent: scalePercent }
+          : scaleMode === 'fitA4'
+            ? { mode: 'fit' as const, width: 595, height: 842 }
+            : { mode: 'fit' as const, width: 612, height: 792 }
+        const blob = await scalePDFPages(pdfFiles[0], opts)
+        pushUndo(blob)
+        onProcessingComplete(blob, toolId)
+      } catch (e: any) { showStatus(e.message || 'Scale failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'linkedit') {
+      if (!hasPDFs) { showStatus('Upload a PDF to edit links'); return }
+      onToolSelect('linkedit')
+      try {
+        setLinkList(await listPDFLinks(pdfFiles[0]))
+      } catch (e: any) { showStatus('Could not read links: ' + e.message) }
+      return
+    }
+
+    if (toolId === 'linkedit_add') {
+      if (!linkForm.url.trim()) { showStatus('Enter a URL for the link'); return }
+      onProcessingStart()
+      try {
+        const blob = await addPDFLink(pdfFiles[0], {
+          pageIndex: linkForm.page - 1, url: linkForm.url.trim(),
+          xPct: linkForm.x, yPct: linkForm.y, wPct: linkForm.w, hPct: linkForm.h,
+        })
+        pushUndo(blob)
+        onProcessingComplete(blob, 'linkedit')
+        setLinkList(await listPDFLinks(new File([blob], pdfFiles[0].name, { type: 'application/pdf' })))
+        showStatus('✓ Link added')
+      } catch (e: any) { showStatus(e.message || 'Add link failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'linkedit_removeall') {
+      onProcessingStart()
+      try {
+        const res = await removePDFLinks(pdfFiles[0])
+        if (res.removed === 0) { onProcessingComplete(new Blob()); showStatus('No links found in this PDF'); return }
+        pushUndo(res.blob)
+        onProcessingComplete(res.blob, 'linkedit')
+        setLinkList([])
+        showStatus(`✓ Removed ${res.removed} link${res.removed > 1 ? 's' : ''}`)
+      } catch (e: any) { showStatus(e.message || 'Remove links failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'contactsheet') {
+      if (!hasPDFs) { showStatus('Upload a PDF for the contact sheet'); return }
+      onProcessingStart()
+      try {
+        const blob = await contactSheetPDF(pdfFiles[0], contactCols, (p, t) => onProgress?.(p, t))
+        pushUndo(blob)
+        onProcessingComplete(blob, toolId)
+      } catch (e: any) { showStatus(e.message || 'Contact sheet failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'bookmarkio') {
+      if (!hasPDFs) { showStatus('Upload a PDF first'); return }
+      onToolSelect('bookmarkio')
+      return
+    }
+
+    if (toolId === 'bookmarkio_export') {
+      onProcessingStart()
+      try {
+        const res = await exportBookmarks(pdfFiles[0])
+        if (res.count === 0) { onProcessingComplete(new Blob()); showStatus('This PDF has no bookmarks to export'); return }
+        onProcessingComplete(res.blob, toolId)
+        showStatus(`✓ Exported ${res.count} bookmark${res.count > 1 ? 's' : ''} as JSON`)
+      } catch (e: any) { showStatus(e.message || 'Export failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'bookmarkio_import') {
+      if (!bmImportFile) { showStatus('Choose a bookmarks JSON file in the panel'); return }
+      onProcessingStart()
+      try {
+        const parsed = JSON.parse(await bmImportFile.text())
+        const items: BookmarkItem[] = Array.isArray(parsed) ? parsed : parsed.items
+        if (!Array.isArray(items) || items.length === 0) throw new Error('No bookmarks found in that JSON')
+        const res = await importBookmarks(pdfFiles[0], items)
+        pushUndo(res.blob)
+        onProcessingComplete(res.blob, toolId)
+        showStatus(`✓ Imported ${res.count} bookmark${res.count > 1 ? 's' : ''} into the outline`)
+      } catch (e: any) { showStatus(e.message || 'Import failed'); onProcessingComplete(new Blob()) }
       return
     }
 
@@ -1967,6 +2079,10 @@ export default function PDFTools({
               repair: 'Recovers damaged PDFs: byte-level cleanup plus a full structure rebuild, with page rasterization as a last-resort fallback.',
               protect: 'Adds a real PDF password (128-bit Standard encryption). Every reader — Chrome, Preview, Acrobat — will prompt on open. Nothing is uploaded.',
               sanitize: 'One-click strip of hidden data: metadata, XMP streams, JavaScript, auto-run actions, embedded files, XFA data, thumbnails, comments.',
+              scalepages: 'Resize page content and page box together — by percentage, or fit everything to A4 or Letter.',
+              linkedit: 'List, add, or strip clickable hyperlinks. Positions are set as percentages of the page.',
+              contactsheet: 'Renders every page as a thumbnail grid on A4-landscape sheets — perfect for visual review.',
+              bookmarkio: 'Export the PDF outline to JSON, or import a JSON outline into any PDF.',
               headfoot: 'Add custom text to the top/bottom of every page. Supports {page}, {total}, {date}.',
               grayscale: 'Convert all colours to greyscale. Reduces file size and saves printer ink.',
               insertpage: 'Insert a blank or duplicate page at any position in the document.',
@@ -3100,6 +3216,103 @@ export default function PDFTools({
                   aria-label="Remove PDF password" style={{background:'#be185d'}}>
             🔓 Remove Password
           </button>
+        </div>
+      )}
+
+      {/* ── Scale Pages panel ────────────────────────────────────────────── */}
+      {selectedTool === 'scalepages' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">🔍</span>
+            <div><p className="font-semibold text-sm">Scale / Resize Pages</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Resize page content and page box together</p></div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <label className="flex items-center gap-2 text-xs" style={{color:'var(--ink)'}}><input type="radio" name="scale-mode" checked={scaleMode === 'percent'} onChange={() => setScaleMode('percent')} /> Percent</label>
+            <label className="flex items-center gap-2 text-xs" style={{color:'var(--ink)'}}><input type="radio" name="scale-mode" checked={scaleMode === 'fitA4'} onChange={() => setScaleMode('fitA4')} /> Fit A4</label>
+            <label className="flex items-center gap-2 text-xs" style={{color:'var(--ink)'}}><input type="radio" name="scale-mode" checked={scaleMode === 'fitLetter'} onChange={() => setScaleMode('fitLetter')} /> Fit Letter</label>
+          </div>
+          {scaleMode === 'percent' && (
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{color:'var(--ink-muted)'}}>Scale: {scalePercent}%</label>
+              <input type="range" min={25} max={200} step={5} value={scalePercent} onChange={e => setScalePercent(Number(e.target.value))} className="w-full" />
+            </div>
+          )}
+          <button onClick={() => handleToolAction('scalepages')} className="btn-primary w-full" style={{background:'#0369a1'}}>
+            🔍 Scale Pages
+          </button>
+        </div>
+      )}
+
+      {/* ── Link Editor panel ────────────────────────────────────────────── */}
+      {selectedTool === 'linkedit' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">🔗</span>
+            <div><p className="font-semibold text-sm">Link Editor</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Add clickable links or strip existing ones</p></div>
+          </div>
+          {linkList && (
+            <div className="rounded-lg p-3 text-xs space-y-1 max-h-36 overflow-y-auto" style={{background:'var(--surface)',border:'1px solid var(--border)'}}>
+              <p className="font-semibold" style={{color:'var(--ink)'}}>{linkList.length} link{linkList.length !== 1 ? 's' : ''} found</p>
+              {linkList.slice(0, 20).map((l, i) => <p key={i} className="truncate" style={{color:'var(--ink-muted)'}}>p{l.pageIndex + 1} · {l.url || '(internal jump)'}</p>)}
+              {linkList.length > 20 && <p style={{color:'var(--ink-muted)'}}>…and {linkList.length - 20} more</p>}
+            </div>
+          )}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold" style={{color:'var(--ink-muted)'}}>Add a link</p>
+            <input className="input" placeholder="https://example.com" value={linkForm.url} onChange={e => setLinkForm(f => ({...f, url: e.target.value}))} />
+            <div className="grid grid-cols-5 gap-2">
+              {(['page', 'x', 'y', 'w', 'h'] as const).map(k => {
+                const isPage = k === 'page'
+                return (
+                <label key={k} className="text-xs" style={{color:'var(--ink-muted)'}}>
+                  {isPage ? 'Page' : k.toUpperCase() + ' %'}
+                  <input type="number" className="input mt-1" value={linkForm[k]} min={isPage ? 1 : 0} max={isPage ? undefined : 100}
+                         onChange={e => setLinkForm(f => ({...f, [k]: Number(e.target.value)}))} />
+                </label>
+                )
+              })}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => handleToolAction('linkedit_add')} className="btn-primary" style={{background:'#0891b2'}}>🔗 Add Link</button>
+            <button onClick={() => handleToolAction('linkedit_removeall')} className="btn-primary" style={{background:'#dc2626'}}>Remove All Links</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Contact Sheet panel ──────────────────────────────────────────── */}
+      {selectedTool === 'contactsheet' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">🎞</span>
+            <div><p className="font-semibold text-sm">Contact Sheet Export</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Every page as a thumbnail grid on A4-landscape sheets</p></div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{color:'var(--ink-muted)'}}>Columns</label>
+            <select className="input" style={{appearance:'auto'}} value={contactCols} onChange={e => setContactCols(Number(e.target.value))}>
+              <option value={3}>3 columns</option>
+              <option value={4}>4 columns</option>
+              <option value={6}>6 columns</option>
+            </select>
+          </div>
+          <button onClick={() => handleToolAction('contactsheet')} className="btn-primary w-full" style={{background:'#374151'}}>
+            🎞 Build Contact Sheet
+          </button>
+        </div>
+      )}
+
+      {/* ── Bookmarks Import / Export panel ──────────────────────────────── */}
+      {selectedTool === 'bookmarkio' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">📥</span>
+            <div><p className="font-semibold text-sm">Bookmarks Import / Export</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Move outlines between documents as JSON</p></div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold mb-1.5" style={{color:'var(--ink-muted)'}}>Export current outline</p>
+            <button onClick={() => handleToolAction('bookmarkio_export')} className="btn-primary w-full" style={{background:'#b45309'}}>📤 Export Bookmarks (.json)</button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold" style={{color:'var(--ink-muted)'}}>Import outline from JSON</p>
+            <input type="file" accept=".json,application/json" onChange={e => setBmImportFile(e.target.files?.[0] || null)} className="text-xs w-full" style={{color:'var(--ink)'}} />
+            <button onClick={() => handleToolAction('bookmarkio_import')} disabled={!bmImportFile} className="btn-primary w-full" style={{background:'#059669'}}>📥 Import Bookmarks</button>
+          </div>
         </div>
       )}
 

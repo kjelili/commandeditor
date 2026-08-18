@@ -126,6 +126,7 @@ export type VoiceCommandType = {
         | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext' | 'reflow' | 'voicefill' | 'notarize'
         | 'reverse' | 'rmblank' | 'interleave' | 'splitbm'
         | 'repair' | 'protect' | 'sanitize'
+        | 'scalepages' | 'linkedit' | 'contactsheet' | 'bookmarkio'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -207,6 +208,22 @@ const COMMAND_MAP: Array<{
   {
     action: 'sanitize', label: 'Sanitize document', emoji: '🧼',
     keywords: /\b(saniti[sz]e|strip (hidden )?data|remove (hidden )?metadata|scrub (the )?(pdf|document|file)|clean metadata|hidden data)\b/i,
+  },
+  {
+    action: 'scalepages', label: 'Scale pages', emoji: '🔍',
+    keywords: /\b(scale pages?|resize pages?|fit (to )?(a4|letter)|shrink pages?|enlarge pages?)\b/i,
+  },
+  {
+    action: 'linkedit', label: 'Edit links', emoji: '🔗',
+    keywords: /\b(edit links?|add (a )?(hyper)?link|remove links?|strip links?|manage links?)\b/i,
+  },
+  {
+    action: 'contactsheet', label: 'Contact sheet', emoji: '🎞',
+    keywords: /\b(contact sheet|thumbnail (grid|overview|sheet)|overview grid|all pages overview)\b/i,
+  },
+  {
+    action: 'bookmarkio', label: 'Import/export bookmarks', emoji: '📥',
+    keywords: /\b(export bookmarks?|import bookmarks?|save bookmarks?|transfer bookmarks?|bookmarks? (to|from) json)\b/i,
   },
 
   // ── COMPRESS ─────────────────────────────────────────────────────────────
