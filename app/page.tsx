@@ -48,6 +48,7 @@ const TOOL_SUFFIX: Record<string, string> = {
   interleave: 'interleaved',
   splitbm: 'chapters',
   repair: 'repaired',
+  protect: 'protected',
   compress: 'compressed',
   rotate: 'rotated',
   crop: 'cropped',

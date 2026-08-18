@@ -94,6 +94,7 @@ const TOOLS = [
   { id: 'totext',      name: 'To Text',     fullName: 'Extract Text',         emoji: '📝', desc: 'TXT or Markdown', requiresPDF: true,    color: '#4338ca', colorLight: '#e0e7ff' },
   { id: 'qrcode',      name: 'QR Code',     fullName: 'Add QR Code',          emoji: '⬛', desc: 'Insert scannable', requiresPDF: true,   color: '#0d9488', colorLight: '#ccfbf1' },
   { id: 'unlock',      name: 'Unlock PDF',  fullName: 'Remove Password',      emoji: '🔓', desc: 'Remove encryption',requiresPDF: true,   color: '#be185d', colorLight: '#fce7f3' },
+  { id: 'protect',     name: 'Protect PDF', fullName: 'Protect with Password', emoji: '🔒', desc: 'Native encryption', requiresPDF: true,  color: '#1d4ed8', colorLight: '#dbeafe' },
   { id: 'repair',      name: 'Repair PDF',  fullName: 'Repair Damaged PDF',   emoji: '🩹', desc: 'Fix corrupt files',requiresPDF: true,   color: '#b45309', colorLight: '#fef3c7' },
   { id: 'headfoot',    name: 'Header/Footer',fullName: 'Add Header & Footer', emoji: '📑', desc: 'Top & bottom text', requiresPDF: true,   color: '#0369a1', colorLight: '#e0f2fe' },
   { id: 'grayscale',   name: 'Grayscale',   fullName: 'Convert to Grayscale', emoji: '⬜', desc: 'Remove colour',    requiresPDF: true,   color: '#374151', colorLight: '#f3f4f6' },
@@ -297,6 +298,9 @@ export default function PDFTools({
   const [interleaveFile, setInterleaveFile] = useState<File|null>(null)
   const [interleaveReverse, setInterleaveReverse] = useState(true)
   const [repairMode, setRepairMode] = useState<RepairMode>('rebuild')
+  const [protectPassword, setProtectPassword] = useState('')
+  const [protectConfirm, setProtectConfirm] = useState('')
+  const [protectPerms, setProtectPerms] = useState({ print: true, copy: false, modify: false, annotate: true })
   const [compareResult, setCompareResult] = useState<any>(null)
   const [compareLoading, setCompareLoading] = useState(false)
   // Accessibility
@@ -724,6 +728,25 @@ export default function PDFTools({
         onProcessingComplete(res.blob, toolId)
         showStatus(`✓ Repaired ${res.pages} page${res.pages > 1 ? 's' : ''} via ${res.method}`)
       } catch (e: any) { showStatus('Repair failed — the file is beyond recovery: ' + (e.message || 'unknown error')); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    // ── Stage 3: Protect PDF (native Standard RC4-128 encryption) ───────────
+    if (toolId === 'protect') {
+      if (!hasPDFs) { showStatus('Upload a PDF to protect'); return }
+      if (!protectPassword) { showStatus('Choose a password in the panel below'); onToolSelect('protect'); return }
+      if (protectPassword !== protectConfirm) { showStatus('Passwords do not match — re-enter them'); onToolSelect('protect'); return }
+      onProcessingStart()
+      try {
+        const { protectPDF } = await import('@/utils/pdfCrypto')
+        const blob = await protectPDF(pdfFiles[0], protectPassword, {
+          allowPrint: protectPerms.print, allowCopy: protectPerms.copy,
+          allowModify: protectPerms.modify, allowAnnotate: protectPerms.annotate,
+        })
+        pushUndo(blob)
+        onProcessingComplete(blob, toolId)
+        showStatus('✓ Password-protected (128-bit). Readers will ask for the password on open.')
+      } catch (e: any) { showStatus(e.message || 'Protection failed'); onProcessingComplete(new Blob()) }
       return
     }
 
@@ -1924,6 +1947,7 @@ export default function PDFTools({
               interleave: 'Merges front-page and back-page scans into one correctly ordered document — the classic duplex-scanner rescue.',
               splitbm: 'Splits the PDF at its top-level bookmarks into one file per chapter, delivered as a ZIP.',
               repair: 'Recovers damaged PDFs: byte-level cleanup plus a full structure rebuild, with page rasterization as a last-resort fallback.',
+              protect: 'Adds a real PDF password (128-bit Standard encryption). Every reader — Chrome, Preview, Acrobat — will prompt on open. Nothing is uploaded.',
               headfoot: 'Add custom text to the top/bottom of every page. Supports {page}, {total}, {date}.',
               grayscale: 'Convert all colours to greyscale. Reduces file size and saves printer ink.',
               insertpage: 'Insert a blank or duplicate page at any position in the document.',
@@ -3056,6 +3080,48 @@ export default function PDFTools({
           <button onClick={() => handleToolAction('unlock')} className="btn-primary w-full"
                   aria-label="Remove PDF password" style={{background:'#be185d'}}>
             🔓 Remove Password
+          </button>
+        </div>
+      )}
+
+      {/* ── Protect PDF panel ────────────────────────────────────────────── */}
+      {selectedTool === 'protect' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xl" aria-hidden="true">🔒</span>
+            <div>
+              <p className="font-semibold text-sm">Protect with Password</p>
+              <p className="text-xs" style={{color:'rgba(10,10,15,0.4)'}}>Native PDF encryption — every reader prompts on open. Nothing is uploaded.</p>
+            </div>
+          </div>
+          <div>
+            <label htmlFor="protect-pw" className="text-xs font-semibold block mb-1.5" style={{color:'var(--ink-muted)'}}>Password</label>
+            <input id="protect-pw" type="password" className="input" value={protectPassword}
+                   placeholder="Choose a password…"
+                   onChange={(e:React.ChangeEvent<HTMLInputElement>) => setProtectPassword(e.target.value)}
+                   aria-label="New PDF password" />
+          </div>
+          <div>
+            <label htmlFor="protect-pw2" className="text-xs font-semibold block mb-1.5" style={{color:'var(--ink-muted)'}}>Confirm password</label>
+            <input id="protect-pw2" type="password" className="input" value={protectConfirm}
+                   placeholder="Repeat the password…"
+                   onChange={(e:React.ChangeEvent<HTMLInputElement>) => setProtectConfirm(e.target.value)}
+                   onKeyDown={(e:React.KeyboardEvent) => { if (e.key === 'Enter') handleToolAction('protect') }}
+                   aria-label="Confirm PDF password" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold mb-1.5" style={{color:'var(--ink-muted)'}}>Allow without password:</p>
+            <div className="grid grid-cols-2 gap-2 text-xs" style={{color:'var(--ink)'}}>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={protectPerms.print} onChange={e => setProtectPerms(p => ({...p, print: e.target.checked}))} /> Printing</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={protectPerms.copy} onChange={e => setProtectPerms(p => ({...p, copy: e.target.checked}))} /> Copying text</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={protectPerms.modify} onChange={e => setProtectPerms(p => ({...p, modify: e.target.checked}))} /> Editing</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={protectPerms.annotate} onChange={e => setProtectPerms(p => ({...p, annotate: e.target.checked}))} /> Annotations</label>
+            </div>
+          </div>
+          <p className="text-xs" style={{color:'var(--ink-muted)'}}>128-bit RC4 (PDF Standard) — opens everywhere. For defence-grade file encryption use the AES-256 Encrypt tool.</p>
+          <button onClick={() => handleToolAction('protect')} className="btn-primary w-full"
+                  aria-label="Protect PDF with password" style={{background:'#1d4ed8'}}>
+            🔒 Protect PDF
           </button>
         </div>
       )}
