@@ -117,6 +117,7 @@ const TOOLS = [
   { id: 'nup',         name: 'N-up',        fullName: 'N-up Handout Layout',  emoji: '⬜', desc: 'Multi-page sheets', requiresPDF: true,   color: '#6366f1', colorLight: '#e0e7ff' },
   { id: 'booklet',     name: 'Booklet',     fullName: 'Booklet Imposition',   emoji: '📖', desc: 'Print, fold, staple', requiresPDF: true,  color: '#b45309', colorLight: '#fef3c7' },
   { id: 'scantopdf',   name: 'Scan to PDF', fullName: 'Scan with Camera',     emoji: '📸', desc: 'Camera → PDF',    requiresPDF: false,   color: '#0d9488', colorLight: '#ccfbf1' },
+  { id: 'formextract', name: 'Form Data',   fullName: 'Form Data Extractor',  emoji: '📤', desc: 'Fields → CSV/JSON', requiresPDF: true,  color: '#15803d', colorLight: '#dcfce7' },
   { id: 'topptx',      name: 'PDF→PPTX',    fullName: 'PDF to PowerPoint',    emoji: '📊', desc: 'Slides from PDF',  requiresPDF: true,   color: '#ea580c', colorLight: '#ffedd5' },
   { id: 'hashcheck',   name: 'File Hash',   fullName: 'File Integrity (SHA-256)',emoji:'🔑',desc:'Verify integrity', requiresPDF: false,  color: '#6366f1', colorLight: '#e0e7ff' },
   { id: 'ocr',         name: 'OCR',         fullName: 'OCR — Make Searchable',    emoji:'🔎',desc:'Scan to text',     requiresPDF: true,   color: '#0891b2', colorLight: '#cffafe' },
@@ -324,6 +325,7 @@ export default function PDFTools({
   const [bmImportFile, setBmImportFile] = useState<File | null>(null)
   const [nupLayout, setNupLayout] = useState<'2' | '4' | '6' | '9'>('4')
   const [bookletPaper, setBookletPaper] = useState<'a4' | 'letter'>('a4')
+  const [formExtractFormat, setFormExtractFormat] = useState<'csv' | 'json'>('csv')
   const [compareResult, setCompareResult] = useState<any>(null)
   const [compareLoading, setCompareLoading] = useState(false)
   // Accessibility
@@ -913,6 +915,21 @@ export default function PDFTools({
         onProcessingComplete(blob, toolId)
         showStatus('✓ Booklet ready — print double-sided (flip on short edge), fold, staple')
       } catch (e: any) { showStatus(e.message || 'Booklet imposition failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    // ── Stage 8: Form Data Extractor ────────────────────────────────────────
+    if (toolId === 'formextract') {
+      if (!hasPDFs) { showStatus('Upload a filled PDF form'); return }
+      onProcessingStart()
+      try {
+        const { extractFormData, formDataCsvBlob, formDataJsonBlob } = await import('@/utils/formExtract')
+        const fields = await extractFormData(pdfFiles[0])
+        if (fields.length === 0) { onProcessingComplete(new Blob()); showStatus('No form fields found — this PDF has no AcroForm data'); return }
+        const blob = formExtractFormat === 'csv' ? formDataCsvBlob(fields) : formDataJsonBlob(fields)
+        onProcessingComplete(blob, toolId)
+        showStatus(`✓ Extracted ${fields.length} field${fields.length > 1 ? 's' : ''} as ${formExtractFormat.toUpperCase()}`)
+      } catch (e: any) { showStatus(e.message || 'Extraction failed'); onProcessingComplete(new Blob()) }
       return
     }
 
@@ -2122,6 +2139,7 @@ export default function PDFTools({
               nup: 'Places 2, 4, 6, or 9 pages per sheet — handouts and compact review copies.',
               booklet: 'Reorders pages into saddle-stitch imposition: print double-sided, fold the stack, staple the spine.',
               scantopdf: 'Capture paper pages with your camera (or upload photos), apply a document filter, and build a multi-page PDF — no upload, ever.',
+              formextract: 'Reads every filled form field (text, checkboxes, dropdowns, radio) and exports the values as CSV or JSON.',
               headfoot: 'Add custom text to the top/bottom of every page. Supports {page}, {total}, {date}.',
               grayscale: 'Convert all colours to greyscale. Reduces file size and saves printer ink.',
               insertpage: 'Insert a blank or duplicate page at any position in the document.',
@@ -3352,6 +3370,23 @@ export default function PDFTools({
             <input type="file" accept=".json,application/json" onChange={e => setBmImportFile(e.target.files?.[0] || null)} className="text-xs w-full" style={{color:'var(--ink)'}} />
             <button onClick={() => handleToolAction('bookmarkio_import')} disabled={!bmImportFile} className="btn-primary w-full" style={{background:'#059669'}}>📥 Import Bookmarks</button>
           </div>
+        </div>
+      )}
+
+      {/* ── Form Data Extractor panel ────────────────────────────────────── */}
+      {selectedTool === 'formextract' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">📤</span>
+            <div><p className="font-semibold text-sm">Form Data Extractor</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Pull filled form values out of a PDF — the inverse of CSV Mail Merge</p></div>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-semibold" style={{color:'var(--ink-muted)'}}>Format:</span>
+            <label className="flex items-center gap-1.5 text-xs" style={{color:'var(--ink)'}}><input type="radio" name="fe-fmt" checked={formExtractFormat === 'csv'} onChange={() => setFormExtractFormat('csv')} /> CSV</label>
+            <label className="flex items-center gap-1.5 text-xs" style={{color:'var(--ink)'}}><input type="radio" name="fe-fmt" checked={formExtractFormat === 'json'} onChange={() => setFormExtractFormat('json')} /> JSON</label>
+          </div>
+          <button onClick={() => handleToolAction('formextract')} className="btn-primary w-full" style={{background:'#15803d'}}>
+            📤 Extract Form Data
+          </button>
         </div>
       )}
 
