@@ -113,6 +113,8 @@ const TOOLS = [
   { id: 'linkedit',    name: 'Links',       fullName: 'Link Editor',          emoji: '🔗', desc: 'Add/remove links', requiresPDF: true,   color: '#0891b2', colorLight: '#cffafe' },
   { id: 'contactsheet',name: 'Contact Sheet',fullName: 'Contact Sheet Export',emoji: '🎞', desc: 'Thumbnail overview', requiresPDF: true,  color: '#374151', colorLight: '#f3f4f6' },
   { id: 'bookmarkio',  name: 'BM Import/Export', fullName: 'Bookmarks Import / Export', emoji: '📥', desc: 'JSON outline transfer', requiresPDF: true, color: '#b45309', colorLight: '#fef3c7' },
+  { id: 'nup',         name: 'N-up',        fullName: 'N-up Handout Layout',  emoji: '⬜', desc: 'Multi-page sheets', requiresPDF: true,   color: '#6366f1', colorLight: '#e0e7ff' },
+  { id: 'booklet',     name: 'Booklet',     fullName: 'Booklet Imposition',   emoji: '📖', desc: 'Print, fold, staple', requiresPDF: true,  color: '#b45309', colorLight: '#fef3c7' },
   { id: 'topptx',      name: 'PDF→PPTX',    fullName: 'PDF to PowerPoint',    emoji: '📊', desc: 'Slides from PDF',  requiresPDF: true,   color: '#ea580c', colorLight: '#ffedd5' },
   { id: 'hashcheck',   name: 'File Hash',   fullName: 'File Integrity (SHA-256)',emoji:'🔑',desc:'Verify integrity', requiresPDF: false,  color: '#6366f1', colorLight: '#e0e7ff' },
   { id: 'ocr',         name: 'OCR',         fullName: 'OCR — Make Searchable',    emoji:'🔎',desc:'Scan to text',     requiresPDF: true,   color: '#0891b2', colorLight: '#cffafe' },
@@ -318,6 +320,8 @@ export default function PDFTools({
   const [linkForm, setLinkForm] = useState({ page: 1, url: '', x: 10, y: 10, w: 30, h: 5 })
   const [contactCols, setContactCols] = useState(4)
   const [bmImportFile, setBmImportFile] = useState<File | null>(null)
+  const [nupLayout, setNupLayout] = useState<'2' | '4' | '6' | '9'>('4')
+  const [bookletPaper, setBookletPaper] = useState<'a4' | 'letter'>('a4')
   const [compareResult, setCompareResult] = useState<any>(null)
   const [compareLoading, setCompareLoading] = useState(false)
   // Accessibility
@@ -877,6 +881,33 @@ export default function PDFTools({
         onProcessingComplete(res.blob, toolId)
         showStatus(`✓ Imported ${res.count} bookmark${res.count > 1 ? 's' : ''} into the outline`)
       } catch (e: any) { showStatus(e.message || 'Import failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    // ── Stage 6: N-up / Booklet imposition ──────────────────────────────────
+    if (toolId === 'nup') {
+      if (!hasPDFs) { showStatus('Upload a PDF for N-up layout'); return }
+      onProcessingStart()
+      try {
+        const { nupPDF } = await import('@/utils/imposition')
+        const layout = { '2': { cols: 2, rows: 1 }, '4': { cols: 2, rows: 2 }, '6': { cols: 2, rows: 3 }, '9': { cols: 3, rows: 3 } }[nupLayout]
+        const blob = await nupPDF(pdfFiles[0], layout)
+        pushUndo(blob)
+        onProcessingComplete(blob, toolId)
+      } catch (e: any) { showStatus(e.message || 'N-up failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    if (toolId === 'booklet') {
+      if (!hasPDFs) { showStatus('Upload a PDF to impose as a booklet'); return }
+      onProcessingStart()
+      try {
+        const { bookletPDF } = await import('@/utils/imposition')
+        const blob = await bookletPDF(pdfFiles[0], bookletPaper)
+        pushUndo(blob)
+        onProcessingComplete(blob, toolId)
+        showStatus('✓ Booklet ready — print double-sided (flip on short edge), fold, staple')
+      } catch (e: any) { showStatus(e.message || 'Booklet imposition failed'); onProcessingComplete(new Blob()) }
       return
     }
 
@@ -2083,6 +2114,8 @@ export default function PDFTools({
               linkedit: 'List, add, or strip clickable hyperlinks. Positions are set as percentages of the page.',
               contactsheet: 'Renders every page as a thumbnail grid on A4-landscape sheets — perfect for visual review.',
               bookmarkio: 'Export the PDF outline to JSON, or import a JSON outline into any PDF.',
+              nup: 'Places 2, 4, 6, or 9 pages per sheet — handouts and compact review copies.',
+              booklet: 'Reorders pages into saddle-stitch imposition: print double-sided, fold the stack, staple the spine.',
               headfoot: 'Add custom text to the top/bottom of every page. Supports {page}, {total}, {date}.',
               grayscale: 'Convert all colours to greyscale. Reduces file size and saves printer ink.',
               insertpage: 'Insert a blank or duplicate page at any position in the document.',
@@ -3313,6 +3346,43 @@ export default function PDFTools({
             <input type="file" accept=".json,application/json" onChange={e => setBmImportFile(e.target.files?.[0] || null)} className="text-xs w-full" style={{color:'var(--ink)'}} />
             <button onClick={() => handleToolAction('bookmarkio_import')} disabled={!bmImportFile} className="btn-primary w-full" style={{background:'#059669'}}>📥 Import Bookmarks</button>
           </div>
+        </div>
+      )}
+
+      {/* ── N-up panel ───────────────────────────────────────────────────── */}
+      {selectedTool === 'nup' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">⬜</span>
+            <div><p className="font-semibold text-sm">N-up Handout Layout</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Multiple pages per sheet — handouts, review copies</p></div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{color:'var(--ink-muted)'}}>Pages per sheet</label>
+            <select className="input" style={{appearance:'auto'}} value={nupLayout} onChange={e => setNupLayout(e.target.value as any)}>
+              <option value="2">2 per sheet (2×1)</option>
+              <option value="4">4 per sheet (2×2)</option>
+              <option value="6">6 per sheet (2×3)</option>
+              <option value="9">9 per sheet (3×3)</option>
+            </select>
+          </div>
+          <button onClick={() => handleToolAction('nup')} className="btn-primary w-full" style={{background:'#6366f1'}}>⬜ Build N-up Sheets</button>
+        </div>
+      )}
+
+      {/* ── Booklet panel ────────────────────────────────────────────────── */}
+      {selectedTool === 'booklet' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">📖</span>
+            <div><p className="font-semibold text-sm">Booklet Imposition</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Saddle-stitch order: print double-sided, fold, staple</p></div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{color:'var(--ink-muted)'}}>Paper (before folding)</label>
+            <select className="input" style={{appearance:'auto'}} value={bookletPaper} onChange={e => setBookletPaper(e.target.value as any)}>
+              <option value="a4">A4 → A5 booklet</option>
+              <option value="letter">Letter → half-letter booklet</option>
+            </select>
+          </div>
+          <p className="text-xs" style={{color:'var(--ink-muted)'}}>Blank filler pages are added automatically when the page count is not a multiple of 4. Print with "flip on short edge".</p>
+          <button onClick={() => handleToolAction('booklet')} className="btn-primary w-full" style={{background:'#b45309'}}>📖 Impose Booklet</button>
         </div>
       )}
 

@@ -54,6 +54,8 @@ const TOOL_SUFFIX: Record<string, string> = {
   linkedit: 'with-links',
   contactsheet: 'contact-sheet',
   bookmarkio: 'bookmarks',
+  nup: 'nup',
+  booklet: 'booklet',
   compress: 'compressed',
   rotate: 'rotated',
   crop: 'cropped',

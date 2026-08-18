@@ -127,6 +127,7 @@ export type VoiceCommandType = {
         | 'reverse' | 'rmblank' | 'interleave' | 'splitbm'
         | 'repair' | 'protect' | 'sanitize'
         | 'scalepages' | 'linkedit' | 'contactsheet' | 'bookmarkio'
+        | 'nup' | 'booklet'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -224,6 +225,14 @@ const COMMAND_MAP: Array<{
   {
     action: 'bookmarkio', label: 'Import/export bookmarks', emoji: '📥',
     keywords: /\b(export bookmarks?|import bookmarks?|save bookmarks?|transfer bookmarks?|bookmarks? (to|from) json)\b/i,
+  },
+  {
+    action: 'nup', label: 'N-up layout', emoji: '⬜',
+    keywords: /\b(n-up|nup|handout|multiple pages per (sheet|page)|pages per sheet|2-?up|4-?up|6-?up|9-?up)\b/i,
+  },
+  {
+    action: 'booklet', label: 'Booklet imposition', emoji: '📖',
+    keywords: /\b(booklet|impose|imposition|saddle[- ]?stitch|print (a )?book|fold and staple)\b/i,
   },
 
   // ── COMPRESS ─────────────────────────────────────────────────────────────
