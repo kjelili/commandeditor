@@ -719,6 +719,9 @@ export default function Home() {
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[
+              { icon: '🔒', title: 'Real PDF passwords', desc: 'Native 128-bit Standard encryption — every reader prompts on open. Implemented in pure TypeScript, so the password never leaves your device.' },
+              { icon: '🧾', title: 'Factur-X e-invoices', desc: 'Embed EN 16931 machine-readable XML into invoice PDFs — ready for EU e-invoicing mandates. The only browser-based tool that does it offline.' },
+              { icon: '🩹', title: 'PDF repair', desc: 'Rescues corrupt or half-downloaded files with byte-level cleanup and a full structure rebuild — rasterization fallback when all else fails.' },
               { icon: '🤖', title: 'On-device AI assistant', desc: 'Ask questions about any document and get answers with page sources. Runs entirely in your browser — no API, no data sent anywhere.' },
               { icon: '🎧', title: 'Listen to PDF', desc: 'Audiobook mode: any document read aloud with per-page chapters, speed control and voice picker — on-device speech, no cloud TTS.' },
               { icon: '⚖️', title: 'Bates numbering', desc: 'Stamp sequential legal identifiers (ACME-000042…) across every page. The e-discovery standard, free — lawyers usually pay Acrobat for this.' },

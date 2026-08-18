@@ -119,6 +119,7 @@ NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
 | **PDF → Image** | Export pages as PNG, JPEG, or WebP |
 | **Scan to PDF** | Capture paper pages with the device camera (or upload photos), apply colour/grayscale/document-B&W filters, build a multi-page A4 PDF |
 | **Form Data Extractor** | Read every filled AcroForm field (text, checkboxes, dropdowns, radio groups) and export values as CSV or JSON |
+| **Factur-X E-Invoice** | Embed EN 16931 CrossIndustryInvoice XML into an invoice PDF (AF: Alternative, PDF/A-3 + Factur-X XMP markers) — EU e-invoicing ready |
 | **PDF → Word** | Convert to editable .docx (text layer preserved) |
 | **PDF → Excel / CSV** | Extract tables and structured data |
 | **PDF → PowerPoint** | Convert slides-as-pages to editable .pptx |
