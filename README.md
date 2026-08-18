@@ -1,55 +1,10 @@
-# CommandEditor v11
+# CommandEditor
 
-> **New in v11 — the moat release.** Twelve capabilities no competitor ships, each pushed as its own stage:
-> - 🧩 **Browser extension** (`extension/`) — right-click any PDF link → "Open in CommandEditor". MV3, zero host permissions, zero analytics, ~60 auditable lines. Plus PWA file handlers (OS "Open with") and share-target on mobile.
-> - 🤝 **Co-Review Rooms** — serverless WebRTC collaboration (Trystero): a 6-char code opens a P2P review room with live pins and accept/reject states. No account, no server, the PDF never travels the channel.
-> - 📋 **Form Intelligence** — detects ruled lines, boxes, checkboxes and "____" blanks in flat/scanned PDFs and synthesizes real AcroForm fields; then **CSV mail-merge** produces one filled PDF per row, zipped.
-> - 🧠 **Multi-Doc Q&A** — ask one question across a whole bundle of PDFs; on-device embeddings (MiniLM) retrieve with per-source page citations.
-> - ⏳ **Version Time-Travel** — every operation auto-snapshots its output to IndexedDB; restore any earlier state or diff its text against the latest.
-> - ✒️ **Redline Mode** — Word Track Changes for PDF: propose/accept/reject text edits, export a clean copy, a redlined copy, and a Markdown negotiation record.
-> - 📅 **Deadlines → Calendar** — finds every date in a contract/filing and exports an .ics with 1-day reminders for Google/Apple/Outlook.
-> - 🖼 **AI Alt-Text** — captions every embedded image with an on-device vision model; review, edit, and stamp into the PDF for screen readers.
-> - 👁 **Dyslexia Reflow** — re-typesets the document under the reader's rules (size, spacing, tinted paper, focus ruler, read-aloud) and exports an accessible PDF.
-> - 🎙 **Voice-Fill Forms** — walk through a form speaking the answers; on-device Whisper transcribes and fills each field. Hands-free.
-> - ⚓ **Blockchain Notarization** — OpenTimestamps anchoring: only the SHA-256 hash leaves the device, the proof is verifiable against Bitcoin forever.
-> - ⌨️ **Headless CLI** (`cli/`, `npx commandeditor`) — merge, split, rotate, pagenum, watermark, compress, hash, info for scripts and CI.
-
-# CommandEditor v10
-
-> **New in v10 — the flexibility release.** Every item on the competitive-gap list, shipped:
-> - 🏪 **Plugin marketplace** — curated one-click installs, install-from-URL, and team config export/import. The SDK's `getPDFDocument()` now actually reaches the live document.
-> - 🧠 **On-device voice (Whisper beta)** — real voice input in Safari/Firefox and offline voice in Chrome; browser STT is no longer the only path. (Typed commands still work everywhere.)
-> - 🏛 **TSP-ready signature export** — digest + signature + public key packaged with instructions so a Qualified Trust Service Provider can upgrade any signature to eIDAS-qualified.
-> - 👁 **Watch Folder** — hot-folder automation via the File System Access API: new PDFs in a local or network folder get compressed/Bates-stamped automatically.
-> - 🔗 **Autorun recipe URLs** — `/?recipe=…&autorun=1` turns a shared link into a one-drop automation pipeline.
-> - 📱 **Mobile quick bar** — thumb-reach bottom navigation on small screens; with the PWA install, the toolkit *is* the mobile app.
-> - 📚 **PDF → EPUB** — reflowable ebooks for Kindle/Kobo. No other free in-browser tool does this.
-> - 📝 **On-device AI summary** — embedding-based extractive summaries, zero cloud.
-> - 🌍 **On-device translation** — 9 language pairs via Helsinki-NLP models, downloaded once, then offline forever.
-> - 🏛 **Enterprise policy presets** — legal / healthcare / government profiles that gate tools without any server.
-> - 🕵️ **Proof of No Upload** — a live network egress auditor so users can *verify* the privacy claim instead of trusting it.
-> - 🔎 **SEO trust layer** — honest `/compare` pages vs iLovePDF, Smallpdf and Adobe, plus `SECURITY.md` and `AIRGAP.md`.
-> - 📁 **Save to folder** — write outputs straight into a local or network directory.
-
-# CommandEditor v9
-
-> **New in v9 — the gap-filler release:**
-> - 📴 **True offline mode** — a real service worker now caches the entire toolkit, and the pdf.js engine ships locally instead of from a CDN. Install the app and every single tool works with zero connection.
-> - ⌨️ **Typed commands in every browser** — voice recognition needs Chrome/Edge, but the full command brain (synonym map + fuzzy scoring) now accepts typed input, so Safari/Firefox/mobile users get the same 60+ commands.
-> - 🎧 **Listen to PDF** — audiobook mode with per-page chapters, speed control and voice picker. On-device speech synthesis; no cloud TTS, no privacy break.
-> - ⚖️ **Bates numbering** — sequential legal page stamping (`ACME-000042…`), the e-discovery standard, free.
-> - ⛓ **Chain-of-custody log** — tamper-evident, hash-chained record appended to the document; one-click chain verification.
-> - 📎 **Embedded attachment extractor** — pull files hidden inside PDFs (portfolios, email archives), individually or zipped.
-> - 👯 **Duplicate page finder** — perceptual hashing detects rescanned/near-identical pages and strips them in one click.
-> - 🛠 **Accessibility auto-fixer** — repairs title, language and metadata instead of just auditing.
-
-# CommandEditor v6
-
-> **The first voice-controlled PDF toolkit. 50+ hands-free commands. 50+ tools. Zero servers. Every byte stays on your device.**
+> A private, browser-based PDF & document toolkit — **90+ tools, on-device AI, cryptographic e-signatures, and 50+ voice commands**. No uploads, no accounts, no servers. Every byte stays on your device.
 
 [Deploy to Vercel](DEPLOY-TO-VERCEL.md) · [Launch checklist](LAUNCH_CHECKLIST.md)
 
-CommandEditor is a professional-grade PDF and document processing suite that runs entirely in the browser. No uploads, no accounts, no subscriptions, no data leaving your machine — ever. Built on Next.js 14, React 18, and TypeScript, it processes files using Web APIs, WebAssembly (pdf.js, pdf-lib), and the Web Crypto API.
+CommandEditor is a professional-grade PDF and document processing suite that runs entirely in the browser — no uploads, no accounts, no subscriptions, no data leaving your machine, ever. It's built on Next.js 14, React 18 and TypeScript, and processes files with Web APIs, WebAssembly (pdf.js, pdf-lib), transformers.js and the Web Crypto API.
 
 ---
 
@@ -66,23 +21,68 @@ This isn't a constraint. It's the design. It means:
 
 ---
 
+## Standout capabilities
+
+Beyond the everyday tools, CommandEditor ships features no other free, in-browser PDF tool offers — all on-device:
+
+**AI & document intelligence**
+- **AI Document Assistant** — chat with a document; in-browser embeddings (all-MiniLM-L6-v2, ~20 MB, cached) answer with page sources. No API calls.
+- **Multi-Doc Q&A** — one question across a whole bundle of PDFs, with per-source page citations.
+- **On-device summary & translation** — extractive summaries and 9 language pairs (Helsinki-NLP), downloaded once then offline.
+- **AI Alt-Text** — captions embedded images with an on-device vision model for screen readers.
+- **Smart Profiler** — detects document type (invoice, contract, academic, scan…) and suggests tools.
+- **Legal & financial extraction** — case-law citations, contract clauses with risk flags, invoice/receipt line items.
+
+**Signing, trust & privacy**
+- **Cryptographic e-signatures** — multi-party ECDSA P-256 signing with an audit trail and downloadable certificate; TSP-ready export for eIDAS upgrade.
+- **Blockchain notarization** — OpenTimestamps anchoring; only the SHA-256 hash leaves the device, verifiable against Bitcoin (full stamp/verify in the CLI).
+- **Document fingerprinting** — per-recipient traceable copies with a Verify tab for leak attribution.
+- **Time-locked documents** — portable `.tlock` bundles (AES-256-GCM, PBKDF2 password keys, availability window).
+- **Auto-redact** — pattern-scan for PII, review, then permanently black out (optional rasterizing flatten).
+- **Proof of No Upload** — a live network-egress auditor so you can verify the privacy claim, not just trust it.
+
+**Collaboration & workflow**
+- **Co-Review Rooms** — serverless WebRTC (Trystero): a 6-char code opens a P2P review room with live pins; the PDF never travels the channel.
+- **Redline Mode** — track-changes for PDF: propose/accept/reject edits, export clean + redlined copies and a Markdown negotiation record.
+- **Version Time-Travel** — every operation auto-snapshots to IndexedDB; restore or diff any earlier state.
+- **Form Intelligence + CSV mail-merge** — detect fields in flat/scanned PDFs, synthesize AcroForm fields, and produce one filled PDF per CSV row.
+- **Voice-Fill Forms** — speak answers; on-device Whisper transcribes and fills each field.
+- **Deadlines → Calendar** — find every date in a contract/filing and export an .ics with reminders.
+- **Batch Engine v2 & Watch Folder** — IF/THEN rules across files, plus hot-folder automation via the File System Access API.
+
+**Editing, conversion & accessibility**
+- **In-place text editing**, **Visual Diff** (side-by-side / overlay / heatmap), **Smart TOC**, **Annotation Layers**, **Barcode & QR suite**.
+- **Dyslexia / low-vision Reflow** — re-typesets under the reader's rules and exports an accessible PDF.
+- **PDF → EPUB**, **Listen to PDF** audiobook mode, **Bates numbering**, **chain-of-custody log**.
+
+**Integrations & platform**
+- **Cloud storage** — Google Drive, Dropbox, OneDrive import/export, browser-direct (needs OAuth client IDs; see Getting started).
+- **Browser extension** (`extension/`, MV3) — right-click a PDF link → "Open in CommandEditor". Plus PWA file handlers and mobile share-target.
+- **Plugin SDK** — third-party commands and panels via `window.CommandEditorPluginSDK`.
+- **Headless CLI** (`cli/`) — merge, split, rotate, watermark, compress, hash, info, and OpenTimestamps notarize/verify for scripts and CI.
+- **Desktop scaffold** — a Tauri wrapper lives in `desktop/`.
+
+---
+
 ## Getting started
 
 ```bash
-# Clone or unzip the project
 cd commandeditor
-
-# Install dependencies
-npm install
-
-# Run in development mode
-npm run dev
-
-# Build for production
-npm run build && npm start
+pnpm install                 # the project uses pnpm (Node 22 recommended)
+pnpm dev                     # development
+pnpm build && pnpm start     # production
 ```
 
-Requires Node.js 18+. No environment variables or external services needed.
+Requires Node.js 18+ (Node 22 recommended). No environment variables are needed for the core toolkit.
+
+**Optional — cloud storage.** To enable Google Drive / Dropbox / OneDrive import & export, copy `.env.local.example` to `.env.local` and add your OAuth client IDs:
+
+```
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+NEXT_PUBLIC_GOOGLE_API_KEY=your_google_api_key      # for the Drive file picker
+NEXT_PUBLIC_DROPBOX_CLIENT_ID=your_dropbox_app_key
+NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
+```
 
 ---
 
@@ -211,44 +211,6 @@ Requires Node.js 18+. No environment variables or external services needed.
 | **Batch Process** | Apply compress, watermark, rotate, or page-number to multiple PDFs simultaneously |
 
 ---
-
-## Modules pack (v8)
-
-Seven more capabilities, still zero-knowledge:
-
-- **Auto-Redact** — scans the text layer for SSNs, credit cards, emails, phone numbers and more; review findings, then permanently black them out (optional flatten pass rasterizes pages so text is unrecoverable).
-- **Smart TOC** — detects headings by font size/weight heuristics, lets you edit the outline, and inserts a table-of-contents page.
-- **Barcode & QR Suite** — generate 13 symbologies (bwip-js), stamp them into PDFs, and scan pages for QR codes (jsqr).
-- **Annotation Layers** — independent note sets per document (review rounds, departments); toggle, lock, export/import JSON, flatten to PDF.
-- **Batch Engine v2** — IF/THEN rules across many files (compress, watermark, rotate, extract text, rename) with ZIP output.
-- **Plugin SDK** — `window.CommandEditorPluginSDK` lets third parties register commands and panels; manifest schema in `lib/plugin-manifest-schema.json`, example in `lib/plugin-examples/`.
-- **Smart Profiler** — after upload, detects the document type (invoice, contract, academic, scan…) and suggests the right tools.
-
-- **Legal & Academic Citations** — US case law, USC, CFR, Federal Register, EU cases, DOIs and URLs, with export.
-- **Invoice / Receipt Parser** — vendor, invoice number, dates, totals, tax and line items as JSON/CSV.
-- **Contract Clause Extractor** — termination, indemnification, liability, governing law, confidentiality; risk flags and a review report (not legal advice).
-- **Document Fingerprinting** — per-recipient traceable copies (metadata payload + faint watermark) with a Verify tab for leak attribution.
-- **Print to PDF** — text/HTML through the system print dialog with A4, receipt-roll and label templates.
-- **Time-Locked Documents** — portable `.tlock` bundles: AES-256-GCM with PBKDF2 password keys, availability window and open limit (password is the enforcement; dates are viewer policy).
-
-A Tauri-based native desktop wrapper lives in `desktop/` (scaffold — see `desktop/README.md`).
-
-## Enhancement pack (v7)
-
-Six new capabilities, all preserving the zero-knowledge architecture — no server processing, ever:
-
-- **Edit Text In-Place** — click any text in a PDF, edit it, save. Rendered with pdf.js, changes applied with pdf-lib.
-- **AI Document Assistant** — floating chat widget that indexes your document in-browser using transformers.js (all-MiniLM-L6-v2 embeddings, ~20 MB one-time download, cached). Ask questions, get answers with page sources. No API calls.
-- **E-Signature Workflow** — multi-party signing with ECDSA P-256 (Web Crypto API), audit trail, and a downloadable cryptographic certificate.
-- **PDF Form Builder** — drag-and-drop AcroForm fields (text, checkbox, dropdown, date, signature) onto a blank page or an existing PDF.
-- **Visual Diff** — pixel-level comparison of two PDFs with side-by-side, overlay, and heatmap modes. Upload two PDFs together to use it.
-- **Cloud Storage** — import from / export to Google Drive, Dropbox, and OneDrive. Files move directly between your browser and your cloud. Requires OAuth client IDs — copy `.env.local.example` to `.env.local` and fill in your keys:
-
-```
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
-NEXT_PUBLIC_DROPBOX_CLIENT_ID=your_dropbox_app_key
-NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
-```
 
 ## Voice commands
 
@@ -422,10 +384,21 @@ Features planned but not yet implemented:
 
 ---
 
+## Release history
+
+- **v11 — the moat release.** Browser extension, Co-Review Rooms, Form Intelligence + CSV mail-merge, Multi-Doc Q&A, Version Time-Travel, Redline Mode, Deadlines→Calendar, AI Alt-Text, Dyslexia Reflow, Voice-Fill Forms, OpenTimestamps notarization, headless CLI.
+- **v10 — the flexibility release.** Plugin marketplace, on-device Whisper voice, TSP-ready signatures, Watch Folder, autorun recipe URLs, mobile quick bar, PDF→EPUB, on-device summary & translation, enterprise policy presets, Proof of No Upload.
+- **v9 — the gap-filler release.** True offline (service worker + local pdf.js), typed commands in every browser, Listen-to-PDF, Bates numbering, chain-of-custody log, attachment extractor, duplicate-page finder, accessibility auto-fixer.
+- **v8 — modules pack.** Auto-redact, Smart TOC, Barcode & QR, Annotation Layers, Batch Engine v2, Plugin SDK, Smart Profiler, legal/finance extraction, fingerprinting, print-to-PDF, time-locked documents.
+- **v7 — enhancement pack.** In-place editing, AI assistant, e-signatures, form builder, Visual Diff, cloud storage.
+- **v6 — foundation.** 50+ tools, 50+ voice commands, zero servers.
+
+---
+
 ## Licence
 
 MIT. See LICENCE file.
 
 ---
 
-*CommandEditor v6 — 50+ tools, 50+ voice commands, zero servers.*
+*CommandEditor v11 — 90+ tools, on-device AI, zero servers.*
