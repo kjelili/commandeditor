@@ -58,6 +58,7 @@ const TOOL_SUFFIX: Record<string, string> = {
   booklet: 'booklet',
   scantopdf: 'scanned',
   formextract: 'form-data',
+  einvoice: 'e-invoice',
   compress: 'compressed',
   rotate: 'rotated',
   crop: 'cropped',

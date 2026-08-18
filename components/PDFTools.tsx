@@ -38,6 +38,7 @@ import {
   scalePDFPages, listPDFLinks, removePDFLinks, addPDFLink,
   contactSheetPDF, exportBookmarks, importBookmarks, PdfLink, BookmarkItem
 } from '@/utils/docTools'
+import { buildFacturXXml, attachEInvoice, computeTotals, InvoiceLine } from '@/utils/einvoice'
 import ListenTool from '@/components/ListenTool'
 import ScanToPDFTool from '@/components/ScanToPDFTool'
 import WatchFolderTool from '@/components/WatchFolderTool'
@@ -118,6 +119,7 @@ const TOOLS = [
   { id: 'booklet',     name: 'Booklet',     fullName: 'Booklet Imposition',   emoji: '📖', desc: 'Print, fold, staple', requiresPDF: true,  color: '#b45309', colorLight: '#fef3c7' },
   { id: 'scantopdf',   name: 'Scan to PDF', fullName: 'Scan with Camera',     emoji: '📸', desc: 'Camera → PDF',    requiresPDF: false,   color: '#0d9488', colorLight: '#ccfbf1' },
   { id: 'formextract', name: 'Form Data',   fullName: 'Form Data Extractor',  emoji: '📤', desc: 'Fields → CSV/JSON', requiresPDF: true,  color: '#15803d', colorLight: '#dcfce7' },
+  { id: 'einvoice',    name: 'E-Invoice',   fullName: 'Factur-X E-Invoice',   emoji: '🧾', desc: 'EU-compliant XML', requiresPDF: true,   color: '#1d4ed8', colorLight: '#dbeafe' },
   { id: 'topptx',      name: 'PDF→PPTX',    fullName: 'PDF to PowerPoint',    emoji: '📊', desc: 'Slides from PDF',  requiresPDF: true,   color: '#ea580c', colorLight: '#ffedd5' },
   { id: 'hashcheck',   name: 'File Hash',   fullName: 'File Integrity (SHA-256)',emoji:'🔑',desc:'Verify integrity', requiresPDF: false,  color: '#6366f1', colorLight: '#e0e7ff' },
   { id: 'ocr',         name: 'OCR',         fullName: 'OCR — Make Searchable',    emoji:'🔎',desc:'Scan to text',     requiresPDF: true,   color: '#0891b2', colorLight: '#cffafe' },
@@ -326,6 +328,8 @@ export default function PDFTools({
   const [nupLayout, setNupLayout] = useState<'2' | '4' | '6' | '9'>('4')
   const [bookletPaper, setBookletPaper] = useState<'a4' | 'letter'>('a4')
   const [formExtractFormat, setFormExtractFormat] = useState<'csv' | 'json'>('csv')
+  const [einv, setEinv] = useState({ number: '', issueDate: new Date().toISOString().slice(0, 10), sellerName: '', sellerVatId: '', buyerName: '', buyerVatId: '', currency: 'EUR' })
+  const [einvLines, setEinvLines] = useState<InvoiceLine[]>([{ description: '', quantity: 1, unitPrice: 0, vatPercent: 20 }])
   const [compareResult, setCompareResult] = useState<any>(null)
   const [compareLoading, setCompareLoading] = useState(false)
   // Accessibility
@@ -930,6 +934,24 @@ export default function PDFTools({
         onProcessingComplete(blob, toolId)
         showStatus(`✓ Extracted ${fields.length} field${fields.length > 1 ? 's' : ''} as ${formExtractFormat.toUpperCase()}`)
       } catch (e: any) { showStatus(e.message || 'Extraction failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    // ── Stage 10: Factur-X e-invoice ────────────────────────────────────────
+    if (toolId === 'einvoice') {
+      if (!hasPDFs) { showStatus('Upload the invoice PDF first'); return }
+      const lines = einvLines.filter(l => l.description.trim() && l.quantity > 0)
+      if (!einv.number.trim() || !einv.sellerName.trim() || !einv.buyerName.trim() || lines.length === 0) {
+        showStatus('Fill in invoice number, seller, buyer, and at least one line item'); onToolSelect('einvoice'); return
+      }
+      onProcessingStart()
+      try {
+        const xml = buildFacturXXml({ ...einv, lines })
+        const blob = await attachEInvoice(pdfFiles[0], xml)
+        pushUndo(blob)
+        onProcessingComplete(blob, toolId)
+        showStatus('✓ Factur-X e-invoice created — EN 16931 XML embedded, PDF/A-3 markers set')
+      } catch (e: any) { showStatus(e.message || 'E-invoice failed'); onProcessingComplete(new Blob()) }
       return
     }
 
@@ -2140,6 +2162,7 @@ export default function PDFTools({
               booklet: 'Reorders pages into saddle-stitch imposition: print double-sided, fold the stack, staple the spine.',
               scantopdf: 'Capture paper pages with your camera (or upload photos), apply a document filter, and build a multi-page PDF — no upload, ever.',
               formextract: 'Reads every filled form field (text, checkboxes, dropdowns, radio) and exports the values as CSV or JSON.',
+              einvoice: 'Embeds EN 16931 structured XML into an invoice PDF (Factur-X / ZUGFeRD) — ready for EU e-invoicing mandates. Entirely offline.',
               headfoot: 'Add custom text to the top/bottom of every page. Supports {page}, {total}, {date}.',
               grayscale: 'Convert all colours to greyscale. Reduces file size and saves printer ink.',
               insertpage: 'Insert a blank or duplicate page at any position in the document.',
@@ -3370,6 +3393,52 @@ export default function PDFTools({
             <input type="file" accept=".json,application/json" onChange={e => setBmImportFile(e.target.files?.[0] || null)} className="text-xs w-full" style={{color:'var(--ink)'}} />
             <button onClick={() => handleToolAction('bookmarkio_import')} disabled={!bmImportFile} className="btn-primary w-full" style={{background:'#059669'}}>📥 Import Bookmarks</button>
           </div>
+        </div>
+      )}
+
+      {/* ── Factur-X E-Invoice panel ─────────────────────────────────────── */}
+      {selectedTool === 'einvoice' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">🧾</span>
+            <div><p className="font-semibold text-sm">Factur-X E-Invoice</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Embed EN 16931 machine-readable XML into this invoice PDF — EU e-invoicing ready</p></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input className="input" placeholder="Invoice number *" value={einv.number} onChange={e => setEinv(v => ({...v, number: e.target.value}))} />
+            <input className="input" type="date" value={einv.issueDate} onChange={e => setEinv(v => ({...v, issueDate: e.target.value}))} />
+            <input className="input" placeholder="Seller name *" value={einv.sellerName} onChange={e => setEinv(v => ({...v, sellerName: e.target.value}))} />
+            <input className="input" placeholder="Seller VAT ID" value={einv.sellerVatId} onChange={e => setEinv(v => ({...v, sellerVatId: e.target.value}))} />
+            <input className="input" placeholder="Buyer name *" value={einv.buyerName} onChange={e => setEinv(v => ({...v, buyerName: e.target.value}))} />
+            <input className="input" placeholder="Buyer VAT ID" value={einv.buyerVatId} onChange={e => setEinv(v => ({...v, buyerVatId: e.target.value}))} />
+            <select className="input" style={{appearance:'auto'}} value={einv.currency} onChange={e => setEinv(v => ({...v, currency: e.target.value}))}>
+              {['EUR', 'USD', 'GBP', 'CHF', 'SEK', 'PLN'].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold" style={{color:'var(--ink-muted)'}}>Line items</p>
+            {einvLines.map((l, i) => (
+              <div key={i} className="grid grid-cols-12 gap-1.5 items-center">
+                <input className="input col-span-5" placeholder="Description *" value={l.description}
+                       onChange={e => setEinvLines(ls => ls.map((x, j) => j === i ? {...x, description: e.target.value} : x))} />
+                <input className="input col-span-2" type="number" min={0} step="any" placeholder="Qty" value={l.quantity || ''}
+                       onChange={e => setEinvLines(ls => ls.map((x, j) => j === i ? {...x, quantity: Number(e.target.value)} : x))} />
+                <input className="input col-span-2" type="number" min={0} step="any" placeholder="Price" value={l.unitPrice || ''}
+                       onChange={e => setEinvLines(ls => ls.map((x, j) => j === i ? {...x, unitPrice: Number(e.target.value)} : x))} />
+                <input className="input col-span-2" type="number" min={0} max={100} placeholder="VAT%" value={l.vatPercent}
+                       onChange={e => setEinvLines(ls => ls.map((x, j) => j === i ? {...x, vatPercent: Number(e.target.value)} : x))} />
+                <button onClick={() => setEinvLines(ls => ls.filter((_, j) => j !== i))}
+                        className="col-span-1 text-center rounded-lg" style={{color:'#dc2626'}} aria-label="Remove line">×</button>
+              </div>
+            ))}
+            <button onClick={() => setEinvLines(ls => [...ls, { description: '', quantity: 1, unitPrice: 0, vatPercent: 20 }])}
+                    className="btn-secondary text-xs w-full">+ Add line</button>
+          </div>
+          {(() => { const t = computeTotals(einvLines.filter(l => l.description.trim())); return (
+            <p className="text-xs text-right" style={{color:'var(--ink-muted)'}}>
+              Net {t.net.toFixed(2)} · VAT {t.tax.toFixed(2)} · <b style={{color:'var(--ink)'}}>Total {t.gross.toFixed(2)} {einv.currency}</b>
+            </p>) })()}
+          <button onClick={() => handleToolAction('einvoice')} className="btn-primary w-full" style={{background:'#1d4ed8'}}>
+            🧾 Embed Factur-X XML
+          </button>
         </div>
       )}
 

@@ -127,7 +127,7 @@ export type VoiceCommandType = {
         | 'reverse' | 'rmblank' | 'interleave' | 'splitbm'
         | 'repair' | 'protect' | 'sanitize'
         | 'scalepages' | 'linkedit' | 'contactsheet' | 'bookmarkio'
-        | 'nup' | 'booklet' | 'scantopdf' | 'formextract'
+        | 'nup' | 'booklet' | 'scantopdf' | 'formextract' | 'einvoice'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -241,6 +241,10 @@ const COMMAND_MAP: Array<{
   {
     action: 'formextract', label: 'Extract form data', emoji: '📤',
     keywords: /\b(extract form (data|fields?|values?)|export form (data|fields?|values?)|form (data|fields?) to (csv|json)|get form values?)\b/i,
+  },
+  {
+    action: 'einvoice', label: 'Factur-X e-invoice', emoji: '🧾',
+    keywords: /\b(e-?invoice|factur-?x|zugferd|xrechnung|embed (the )?invoice xml|en ?16931)\b/i,
   },
 
   // ── COMPRESS ─────────────────────────────────────────────────────────────
