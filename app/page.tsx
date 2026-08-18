@@ -47,6 +47,7 @@ const TOOL_SUFFIX: Record<string, string> = {
   rmblank: 'cleaned',
   interleave: 'interleaved',
   splitbm: 'chapters',
+  repair: 'repaired',
   compress: 'compressed',
   rotate: 'rotated',
   crop: 'cropped',

@@ -33,6 +33,7 @@ import {
   reversePageOrder, findBlankPages, removePagesByIndex,
   interleavePDFs, splitPDFByBookmarks
 } from '@/utils/pageOps'
+import { repairPDF, RepairMode } from '@/utils/repairPdf'
 import ListenTool from '@/components/ListenTool'
 import WatchFolderTool from '@/components/WatchFolderTool'
 import NetworkAuditTool from '@/components/NetworkAuditTool'
@@ -93,6 +94,7 @@ const TOOLS = [
   { id: 'totext',      name: 'To Text',     fullName: 'Extract Text',         emoji: '📝', desc: 'TXT or Markdown', requiresPDF: true,    color: '#4338ca', colorLight: '#e0e7ff' },
   { id: 'qrcode',      name: 'QR Code',     fullName: 'Add QR Code',          emoji: '⬛', desc: 'Insert scannable', requiresPDF: true,   color: '#0d9488', colorLight: '#ccfbf1' },
   { id: 'unlock',      name: 'Unlock PDF',  fullName: 'Remove Password',      emoji: '🔓', desc: 'Remove encryption',requiresPDF: true,   color: '#be185d', colorLight: '#fce7f3' },
+  { id: 'repair',      name: 'Repair PDF',  fullName: 'Repair Damaged PDF',   emoji: '🩹', desc: 'Fix corrupt files',requiresPDF: true,   color: '#b45309', colorLight: '#fef3c7' },
   { id: 'headfoot',    name: 'Header/Footer',fullName: 'Add Header & Footer', emoji: '📑', desc: 'Top & bottom text', requiresPDF: true,   color: '#0369a1', colorLight: '#e0f2fe' },
   { id: 'grayscale',   name: 'Grayscale',   fullName: 'Convert to Grayscale', emoji: '⬜', desc: 'Remove colour',    requiresPDF: true,   color: '#374151', colorLight: '#f3f4f6' },
   { id: 'insertpage',  name: 'Insert Page', fullName: 'Insert / Duplicate Page',emoji:'➕',desc: 'Add blank or copy', requiresPDF: true,  color: '#059669', colorLight: '#d1fae5' },
@@ -294,6 +296,7 @@ export default function PDFTools({
   const [compareFile, setCompareFile] = useState<File|null>(null)
   const [interleaveFile, setInterleaveFile] = useState<File|null>(null)
   const [interleaveReverse, setInterleaveReverse] = useState(true)
+  const [repairMode, setRepairMode] = useState<RepairMode>('rebuild')
   const [compareResult, setCompareResult] = useState<any>(null)
   const [compareLoading, setCompareLoading] = useState(false)
   // Accessibility
@@ -706,6 +709,21 @@ export default function PDFTools({
         onProcessingComplete(res.blob, toolId)
         showStatus(`✓ Split into ${res.chapters} chapter files (ZIP)`)
       } catch (e: any) { showStatus(e.message || 'Split by bookmarks failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    // ── Stage 2: Repair PDF ─────────────────────────────────────────────────
+    if (toolId === 'repair') {
+      if (!hasPDFs) { showStatus('Upload a damaged PDF to repair'); return }
+      onSizeChange?.(pdfFiles[0].size)
+      onProcessingStart()
+      try {
+        showStatus(repairMode === 'rasterize' ? 'Rasterizing pages — this can take a minute…' : 'Attempting structure rebuild…')
+        const res = await repairPDF(pdfFiles[0], repairMode, (p, t) => onProgress?.(p, t))
+        pushUndo(res.blob)
+        onProcessingComplete(res.blob, toolId)
+        showStatus(`✓ Repaired ${res.pages} page${res.pages > 1 ? 's' : ''} via ${res.method}`)
+      } catch (e: any) { showStatus('Repair failed — the file is beyond recovery: ' + (e.message || 'unknown error')); onProcessingComplete(new Blob()) }
       return
     }
 
@@ -1905,6 +1923,7 @@ export default function PDFTools({
               rmblank: 'Detects pages with no text, images, or drawings and removes them. Conservative: vector-only pages are kept.',
               interleave: 'Merges front-page and back-page scans into one correctly ordered document — the classic duplex-scanner rescue.',
               splitbm: 'Splits the PDF at its top-level bookmarks into one file per chapter, delivered as a ZIP.',
+              repair: 'Recovers damaged PDFs: byte-level cleanup plus a full structure rebuild, with page rasterization as a last-resort fallback.',
               headfoot: 'Add custom text to the top/bottom of every page. Supports {page}, {total}, {date}.',
               grayscale: 'Convert all colours to greyscale. Reduces file size and saves printer ink.',
               insertpage: 'Insert a blank or duplicate page at any position in the document.',
@@ -3319,6 +3338,28 @@ export default function PDFTools({
           {!readabilityResult && !readabilityLoading && (
             <button onClick={() => handleToolAction('readability')} className="btn-primary w-full">📖 Analyse Readability</button>
           )}
+        </div>
+      )}
+
+      {/* ── REPAIR PDF ───────────────────────────────────────────────────── */}
+      {selectedTool === 'repair' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3"><span className="text-xl">🩹</span>
+            <div><p className="font-semibold text-sm">Repair Damaged PDF</p><p className="text-xs" style={{color:'var(--ink-muted)'}}>Recover corrupt or half-downloaded files</p></div>
+          </div>
+          <div className="space-y-2">
+            <label className="flex items-start gap-2 text-xs" style={{color:'var(--ink)'}}>
+              <input type="radio" name="repair-mode" checked={repairMode === 'rebuild'} onChange={() => setRepairMode('rebuild')} className="mt-0.5" />
+              <span><b>Structure rebuild</b> (recommended) — rewrites the file structure, keeps text selectable. Falls back automatically if unsalvageable.</span>
+            </label>
+            <label className="flex items-start gap-2 text-xs" style={{color:'var(--ink)'}}>
+              <input type="radio" name="repair-mode" checked={repairMode === 'rasterize'} onChange={() => setRepairMode('rasterize')} className="mt-0.5" />
+              <span><b>Rasterize pages</b> — renders every page to an image. Works whenever the file can be displayed at all, but the text layer is lost.</span>
+            </label>
+          </div>
+          <button onClick={() => handleToolAction('repair')} className="btn-primary w-full" style={{background:'#b45309'}}>
+            🩹 Repair PDF
+          </button>
         </div>
       )}
 

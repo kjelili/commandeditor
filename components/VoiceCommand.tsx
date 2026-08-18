@@ -125,6 +125,7 @@ export type VoiceCommandType = {
         | 'epub' | 'summarize' | 'translate' | 'watchfolder' | 'netaudit' | 'policy'
         | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext' | 'reflow' | 'voicefill' | 'notarize'
         | 'reverse' | 'rmblank' | 'interleave' | 'splitbm'
+        | 'repair'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -194,6 +195,10 @@ const COMMAND_MAP: Array<{
   {
     action: 'splitbm', label: 'Split by bookmarks', emoji: '📑',
     keywords: /\b(split (by|on|at) (bookmarks?|chapters?|outline|toc|table of contents)|chapter split|split into chapters?)\b/i,
+  },
+  {
+    action: 'repair', label: 'Repair PDF', emoji: '🩹',
+    keywords: /\b(repair|fix|recover|salvage|rescue)( this| the| my)? (pdf|file|document)|corrupt(ed)? (pdf|file)|broken (pdf|file)|damaged (pdf|file)\b/i,
   },
 
   // ── COMPRESS ─────────────────────────────────────────────────────────────
