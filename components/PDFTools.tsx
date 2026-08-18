@@ -39,6 +39,7 @@ import {
   contactSheetPDF, exportBookmarks, importBookmarks, PdfLink, BookmarkItem
 } from '@/utils/docTools'
 import ListenTool from '@/components/ListenTool'
+import ScanToPDFTool from '@/components/ScanToPDFTool'
 import WatchFolderTool from '@/components/WatchFolderTool'
 import NetworkAuditTool from '@/components/NetworkAuditTool'
 import CollabTool from '@/components/CollabTool'
@@ -73,7 +74,7 @@ interface PDFToolsProps {
 // Tools that are fully usable with no file uploaded (v10: corrected the
 // blanket "upload first" disable so utilities like policy/watch/audit are
 // reachable from an empty state).
-const NO_FILE_TOOLS = ['hashcheck', 'aesencrypt', 'formbuilder', 'cloudconnect', 'printpdf', 'timelock', 'macro', 'recipe', 'watchfolder', 'netaudit', 'policy']
+const NO_FILE_TOOLS = ['hashcheck', 'aesencrypt', 'formbuilder', 'cloudconnect', 'printpdf', 'timelock', 'macro', 'recipe', 'watchfolder', 'netaudit', 'policy', 'scantopdf']
 
 const TOOLS = [
   { id: 'merge',       name: 'Merge',       fullName: 'Merge PDFs',         emoji: '⊕',  desc: 'Combine PDFs',    requiresPDF: true,    color: '#2563eb', colorLight: '#dbeafe' },
@@ -115,6 +116,7 @@ const TOOLS = [
   { id: 'bookmarkio',  name: 'BM Import/Export', fullName: 'Bookmarks Import / Export', emoji: '📥', desc: 'JSON outline transfer', requiresPDF: true, color: '#b45309', colorLight: '#fef3c7' },
   { id: 'nup',         name: 'N-up',        fullName: 'N-up Handout Layout',  emoji: '⬜', desc: 'Multi-page sheets', requiresPDF: true,   color: '#6366f1', colorLight: '#e0e7ff' },
   { id: 'booklet',     name: 'Booklet',     fullName: 'Booklet Imposition',   emoji: '📖', desc: 'Print, fold, staple', requiresPDF: true,  color: '#b45309', colorLight: '#fef3c7' },
+  { id: 'scantopdf',   name: 'Scan to PDF', fullName: 'Scan with Camera',     emoji: '📸', desc: 'Camera → PDF',    requiresPDF: false,   color: '#0d9488', colorLight: '#ccfbf1' },
   { id: 'topptx',      name: 'PDF→PPTX',    fullName: 'PDF to PowerPoint',    emoji: '📊', desc: 'Slides from PDF',  requiresPDF: true,   color: '#ea580c', colorLight: '#ffedd5' },
   { id: 'hashcheck',   name: 'File Hash',   fullName: 'File Integrity (SHA-256)',emoji:'🔑',desc:'Verify integrity', requiresPDF: false,  color: '#6366f1', colorLight: '#e0e7ff' },
   { id: 'ocr',         name: 'OCR',         fullName: 'OCR — Make Searchable',    emoji:'🔎',desc:'Scan to text',     requiresPDF: true,   color: '#0891b2', colorLight: '#cffafe' },
@@ -563,6 +565,9 @@ export default function PDFTools({
     if (['watchfolder', 'netaudit', 'policy'].includes(toolId)) {
       onToolSelect(toolId); return
     }
+
+    // Stage 7: Scan to PDF builds a document from nothing — camera or photos
+    if (toolId === 'scantopdf') { onToolSelect('scantopdf'); return }
 
     // v11: Co-Review opens a panel around the currently loaded PDF
     if (toolId === 'collab') {
@@ -2116,6 +2121,7 @@ export default function PDFTools({
               bookmarkio: 'Export the PDF outline to JSON, or import a JSON outline into any PDF.',
               nup: 'Places 2, 4, 6, or 9 pages per sheet — handouts and compact review copies.',
               booklet: 'Reorders pages into saddle-stitch imposition: print double-sided, fold the stack, staple the spine.',
+              scantopdf: 'Capture paper pages with your camera (or upload photos), apply a document filter, and build a multi-page PDF — no upload, ever.',
               headfoot: 'Add custom text to the top/bottom of every page. Supports {page}, {total}, {date}.',
               grayscale: 'Convert all colours to greyscale. Reduces file size and saves printer ink.',
               insertpage: 'Insert a blank or duplicate page at any position in the document.',
@@ -3347,6 +3353,14 @@ export default function PDFTools({
             <button onClick={() => handleToolAction('bookmarkio_import')} disabled={!bmImportFile} className="btn-primary w-full" style={{background:'#059669'}}>📥 Import Bookmarks</button>
           </div>
         </div>
+      )}
+
+      {/* ── Scan to PDF panel (works with no file uploaded) ─────────────── */}
+      {selectedTool === 'scantopdf' && (
+        <ScanToPDFTool
+          onComplete={(blob) => { onProcessingStart(); onProcessingComplete(blob, 'scantopdf') }}
+          showStatus={showStatus}
+        />
       )}
 
       {/* ── N-up panel ───────────────────────────────────────────────────── */}

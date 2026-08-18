@@ -56,6 +56,7 @@ const TOOL_SUFFIX: Record<string, string> = {
   bookmarkio: 'bookmarks',
   nup: 'nup',
   booklet: 'booklet',
+  scantopdf: 'scanned',
   compress: 'compressed',
   rotate: 'rotated',
   crop: 'cropped',

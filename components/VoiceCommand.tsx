@@ -127,7 +127,7 @@ export type VoiceCommandType = {
         | 'reverse' | 'rmblank' | 'interleave' | 'splitbm'
         | 'repair' | 'protect' | 'sanitize'
         | 'scalepages' | 'linkedit' | 'contactsheet' | 'bookmarkio'
-        | 'nup' | 'booklet'
+        | 'nup' | 'booklet' | 'scantopdf'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -233,6 +233,10 @@ const COMMAND_MAP: Array<{
   {
     action: 'booklet', label: 'Booklet imposition', emoji: '📖',
     keywords: /\b(booklet|impose|imposition|saddle[- ]?stitch|print (a )?book|fold and staple)\b/i,
+  },
+  {
+    action: 'scantopdf', label: 'Scan to PDF', emoji: '📸',
+    keywords: /\b(scan (to pdf|a page|pages?|document|paper)|camera scan|take (a )?photo (of|to)|digitize paper)\b/i,
   },
 
   // ── COMPRESS ─────────────────────────────────────────────────────────────
