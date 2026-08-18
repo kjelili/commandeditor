@@ -49,6 +49,7 @@ const TOOL_SUFFIX: Record<string, string> = {
   splitbm: 'chapters',
   repair: 'repaired',
   protect: 'protected',
+  sanitize: 'sanitized',
   compress: 'compressed',
   rotate: 'rotated',
   crop: 'cropped',

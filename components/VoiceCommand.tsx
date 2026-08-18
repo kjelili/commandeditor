@@ -125,7 +125,7 @@ export type VoiceCommandType = {
         | 'epub' | 'summarize' | 'translate' | 'watchfolder' | 'netaudit' | 'policy'
         | 'collab' | 'formfill' | 'multidoc' | 'timetravel' | 'redline' | 'deadlineics' | 'alttext' | 'reflow' | 'voicefill' | 'notarize'
         | 'reverse' | 'rmblank' | 'interleave' | 'splitbm'
-        | 'repair' | 'protect'
+        | 'repair' | 'protect' | 'sanitize'
         | 'download' | 'upload'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
@@ -203,6 +203,10 @@ const COMMAND_MAP: Array<{
   {
     action: 'protect', label: 'Protect with password', emoji: '🔒',
     keywords: /\b(protect|password-protect|add (a )?password|encrypt (this|the|my) pdf|lock (this|the|my) (pdf|file|document)|secure (this|the|my) (pdf|file|document))\b/i,
+  },
+  {
+    action: 'sanitize', label: 'Sanitize document', emoji: '🧼',
+    keywords: /\b(saniti[sz]e|strip (hidden )?data|remove (hidden )?metadata|scrub (the )?(pdf|document|file)|clean metadata|hidden data)\b/i,
   },
 
   // ── COMPRESS ─────────────────────────────────────────────────────────────

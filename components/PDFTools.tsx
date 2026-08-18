@@ -90,6 +90,7 @@ const TOOLS = [
   { id: 'toexcel',     name: 'PDF→Excel',   fullName: 'PDF to Excel/CSV',    emoji: '📊', desc: 'Extract tables',  requiresPDF: true,    color: '#15803d', colorLight: '#dcfce7' },
   { id: 'rearrange',   name: 'Rearrange',   fullName: 'Rearrange Pages',     emoji: '⇅',  desc: 'Drag & reorganize',requiresPDF: true,   color: '#ea580c', colorLight: '#ffedd5' },
   { id: 'redact',      name: 'Redact',      fullName: 'Redact Content',       emoji: '⬛', desc: 'Black-out text',  requiresPDF: true,    color: '#1c1917', colorLight: '#f5f5f4' },
+  { id: 'sanitize',    name: 'Sanitize',    fullName: 'Sanitize Document',    emoji: '🧼', desc: 'Strip hidden data', requiresPDF: true,   color: '#7c3aed', colorLight: '#ede9fe' },
   { id: 'crop',        name: 'Crop',        fullName: 'Crop Pages',           emoji: '✂️', desc: 'Trim margins',    requiresPDF: true,    color: '#0891b2', colorLight: '#cffafe' },
   { id: 'totext',      name: 'To Text',     fullName: 'Extract Text',         emoji: '📝', desc: 'TXT or Markdown', requiresPDF: true,    color: '#4338ca', colorLight: '#e0e7ff' },
   { id: 'qrcode',      name: 'QR Code',     fullName: 'Add QR Code',          emoji: '⬛', desc: 'Insert scannable', requiresPDF: true,   color: '#0d9488', colorLight: '#ccfbf1' },
@@ -301,6 +302,8 @@ export default function PDFTools({
   const [protectPassword, setProtectPassword] = useState('')
   const [protectConfirm, setProtectConfirm] = useState('')
   const [protectPerms, setProtectPerms] = useState({ print: true, copy: false, modify: false, annotate: true })
+  const [sanitizeOpts, setSanitizeOpts] = useState({ metadata: true, javascript: true, embeddedFiles: true, annotations: true, formData: true, thumbnails: true })
+  const [sanitizeReport, setSanitizeReport] = useState<string[] | null>(null)
   const [compareResult, setCompareResult] = useState<any>(null)
   const [compareLoading, setCompareLoading] = useState(false)
   // Accessibility
@@ -747,6 +750,21 @@ export default function PDFTools({
         onProcessingComplete(blob, toolId)
         showStatus('✓ Password-protected (128-bit). Readers will ask for the password on open.')
       } catch (e: any) { showStatus(e.message || 'Protection failed'); onProcessingComplete(new Blob()) }
+      return
+    }
+
+    // ── Stage 4: Sanitize Document ──────────────────────────────────────────
+    if (toolId === 'sanitize') {
+      if (!hasPDFs) { showStatus('Upload a PDF to sanitize'); return }
+      onProcessingStart()
+      try {
+        const { sanitizePDF } = await import('@/utils/sanitizePdf')
+        const res = await sanitizePDF(pdfFiles[0], sanitizeOpts)
+        pushUndo(res.blob)
+        onProcessingComplete(res.blob, toolId)
+        setSanitizeReport(res.removed)
+        showStatus(`✓ Sanitized — removed: ${res.removed.slice(0, 3).join('; ')}${res.removed.length > 3 ? ` +${res.removed.length - 3} more` : ''}`)
+      } catch (e: any) { showStatus(e.message || 'Sanitize failed'); onProcessingComplete(new Blob()) }
       return
     }
 
@@ -1948,6 +1966,7 @@ export default function PDFTools({
               splitbm: 'Splits the PDF at its top-level bookmarks into one file per chapter, delivered as a ZIP.',
               repair: 'Recovers damaged PDFs: byte-level cleanup plus a full structure rebuild, with page rasterization as a last-resort fallback.',
               protect: 'Adds a real PDF password (128-bit Standard encryption). Every reader — Chrome, Preview, Acrobat — will prompt on open. Nothing is uploaded.',
+              sanitize: 'One-click strip of hidden data: metadata, XMP streams, JavaScript, auto-run actions, embedded files, XFA data, thumbnails, comments.',
               headfoot: 'Add custom text to the top/bottom of every page. Supports {page}, {total}, {date}.',
               grayscale: 'Convert all colours to greyscale. Reduces file size and saves printer ink.',
               insertpage: 'Insert a blank or duplicate page at any position in the document.',
@@ -3080,6 +3099,37 @@ export default function PDFTools({
           <button onClick={() => handleToolAction('unlock')} className="btn-primary w-full"
                   aria-label="Remove PDF password" style={{background:'#be185d'}}>
             🔓 Remove Password
+          </button>
+        </div>
+      )}
+
+      {/* ── Sanitize Document panel ──────────────────────────────────────── */}
+      {selectedTool === 'sanitize' && files.length > 0 && hasPDFs && (
+        <div className="card animate-scale-in space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xl" aria-hidden="true">🧼</span>
+            <div>
+              <p className="font-semibold text-sm">Sanitize Document</p>
+              <p className="text-xs" style={{color:'rgba(10,10,15,0.4)'}}>Strip hidden data — redaction hides what you see, sanitization removes what you can't</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs" style={{color:'var(--ink)'}}>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={sanitizeOpts.metadata} onChange={e => setSanitizeOpts(o => ({...o, metadata: e.target.checked}))} /> Metadata + XMP</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={sanitizeOpts.javascript} onChange={e => setSanitizeOpts(o => ({...o, javascript: e.target.checked}))} /> JavaScript + auto-actions</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={sanitizeOpts.embeddedFiles} onChange={e => setSanitizeOpts(o => ({...o, embeddedFiles: e.target.checked}))} /> Embedded files</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={sanitizeOpts.annotations} onChange={e => setSanitizeOpts(o => ({...o, annotations: e.target.checked}))} /> Comments/markup</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={sanitizeOpts.formData} onChange={e => setSanitizeOpts(o => ({...o, formData: e.target.checked}))} /> XFA form data</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={sanitizeOpts.thumbnails} onChange={e => setSanitizeOpts(o => ({...o, thumbnails: e.target.checked}))} /> Page thumbnails</label>
+          </div>
+          {sanitizeReport && (
+            <div className="rounded-lg p-3 text-xs space-y-1" style={{background:'var(--surface)',border:'1px solid var(--border)'}}>
+              <p className="font-semibold" style={{color:'var(--ink)'}}>Removed:</p>
+              {sanitizeReport.map((r, i) => <p key={i} style={{color:'var(--ink-muted)'}}>• {r}</p>)}
+            </div>
+          )}
+          <button onClick={() => handleToolAction('sanitize')} className="btn-primary w-full"
+                  aria-label="Sanitize document" style={{background:'#7c3aed'}}>
+            🧼 Sanitize Document
           </button>
         </div>
       )}
