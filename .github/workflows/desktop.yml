@@ -15,6 +15,10 @@ on:
     tags:
       - 'desktop-v*'
 
+# GITHUB_TOKEN defaults to read-only; creating a GitHub Release needs write.
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -72,9 +76,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: desktop
-          tagName: desktop-v__VERSION__
-          releaseName: 'CommandEditor Desktop v__VERSION__'
-          releaseBody: 'Native desktop build of CommandEditor — the private, in-browser PDF toolkit, now as an offline app.'
+          # Release inputs only on tag pushes — an empty tagName tells
+          # tauri-action to skip release creation (manual runs = artifacts only).
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && 'desktop-v__VERSION__' || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/') && 'CommandEditor Desktop v__VERSION__' || '' }}
+          releaseBody: ${{ startsWith(github.ref, 'refs/tags/') && 'Native desktop build of CommandEditor — the private, in-browser PDF toolkit, now as an offline app.' || '' }}
           releaseDraft: true
           prerelease: false
 
