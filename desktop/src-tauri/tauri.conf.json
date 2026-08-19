@@ -1,4 +1,8 @@
 {
+  "package": {
+    "productName": "CommandEditor",
+    "version": "1.1.0"
+  },
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
@@ -52,7 +56,7 @@
       "resources": [
         "resources/*"
       ],
-      "copyright": "\u00a9 2026 CommandEditor",
+      "copyright": "© 2026 CommandEditor",
       "category": "Productivity",
       "shortDescription": "Professional PDF editing",
       "longDescription": "CommandEditor Desktop brings professional PDF editing to your native desktop with GPU acceleration, system integration, and offline-first architecture.",
