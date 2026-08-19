@@ -1,0 +1,30 @@
+{
+  "name": "commandeditor",
+  "version": "1.1.0",
+  "description": "Private, headless PDF tools — merge, split, rotate, watermark, compress, hash, notarize. Everything runs locally; files never leave your machine.",
+  "keywords": [
+    "pdf", "pdf-tools", "merge-pdf", "split-pdf", "watermark", "pdf-cli",
+    "privacy", "offline", "opentimestamps", "notarize"
+  ],
+  "homepage": "https://commandeditor.com",
+  "bugs": "https://github.com/kjelili/commandeditor/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjelili/commandeditor.git",
+    "directory": "cli"
+  },
+  "license": "MIT",
+  "bin": {
+    "commandeditor": "index.js"
+  },
+  "files": [
+    "index.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  }
+}

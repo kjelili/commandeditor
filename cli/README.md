@@ -56,3 +56,18 @@ Then:
     commandeditor verify contract.pdf contract.pdf.ots
 
 The .ots is a standard OpenTimestamps proof — it also verifies at opentimestamps.org.
+
+## Publish (maintainer)
+
+The package is npm-ready — `commandeditor` name reserved-shaped
+package.json, `bin` entry, files whitelist, `pdf-lib` dependency pinned:
+
+```bash
+cd cli
+npm login            # once
+npm publish          # dry-run first with: npm pack --dry-run
+```
+
+`tests/cli.test.mts` runs every command end-to-end against generated PDFs —
+run it before every version bump. After publishing, users get the toolkit with
+`npx commandeditor <command>`.
