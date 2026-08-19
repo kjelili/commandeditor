@@ -75,6 +75,17 @@ pnpm build && pnpm start     # production
 
 Requires Node.js 18+ (Node 22 recommended). No environment variables are needed for the core toolkit.
 
+## Distribution channels
+
+CommandEditor is one codebase, four surfaces:
+
+- **Web** — [commandeditor.com](https://commandeditor.com), an installable PWA that works fully offline (service worker + file-handler + share-target).
+- **Browser extension** — `extension/` is Chrome Web Store–ready (MV3, single `contextMenus` permission, no host access). Build the upload zip with `node scripts/pack-extension.mjs`; listing copy and permission justifications in `extension/STORE_LISTING.md`.
+- **Desktop** — `desktop/` Tauri shell (Rust, ~600 KB). Tag `desktop-v*` to trigger the release workflow (`desktop/desktop.yml` → copy to `.github/workflows/`) which builds Linux/Windows/macOS installers as a draft Release.
+- **CLI** — `cli/` publishes to npm as `commandeditor` (`npx commandeditor merge a.pdf b.pdf -o out.pdf`). npm-ready package.json included; `tests/cli.test.mts` exercises every command.
+
+Each surface has its own automated readiness tests in `tests/` (122 assertions total).
+
 **Optional — cloud storage.** To enable Google Drive / Dropbox / OneDrive import & export, copy `.env.local.example` to `.env.local` and add your OAuth client IDs:
 
 ```
