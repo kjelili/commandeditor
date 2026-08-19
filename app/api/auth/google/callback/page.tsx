@@ -6,10 +6,14 @@
 // The token never touches a server — this page runs entirely client-side.
 
 import { useEffect } from 'react'
+import { relayToDesktopIfNeeded } from '@/lib/cloudDesktopAuth'
 
 export default function CallbackPage() {
   useEffect(() => {
     try {
+      // Desktop app flow: hand the token to the loopback listener the
+      // desktop shell started, instead of postMessaging a popup opener.
+      if (relayToDesktopIfNeeded('google')) return
       const params = new URLSearchParams(window.location.hash.substring(1))
       const accessToken = params.get('access_token')
       const expiresIn = params.get('expires_in')

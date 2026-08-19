@@ -14,6 +14,11 @@ import {
   isCloudProviderConfigured,
   filterConfiguredProviders,
 } from '../lib/cloudConfig';
+import {
+  isDesktopRuntime,
+  runDesktopOAuth,
+  DESKTOP_RELAY_ORIGIN,
+} from '../lib/cloudDesktopAuth';
 
 interface Props {
   onFileSelect: (bytes: Uint8Array, name: string) => void;
@@ -87,8 +92,32 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
       setErrorMsg('Google Drive is not configured in this build (missing NEXT_PUBLIC_GOOGLE_CLIENT_ID).');
       return;
     }
-    const redirectUri = `${window.location.origin}/api/auth/google/callback`;
     const scope = 'https://www.googleapis.com/auth/drive.file';
+
+    // Desktop: system browser + loopback relay (Google blocks embedded
+    // webviews and won't whitelist tauri.localhost). See lib/cloudDesktopAuth.
+    if (isDesktopRuntime()) {
+      const authorizeUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${clientId}&` +
+        `redirect_uri=${encodeURIComponent(`${DESKTOP_RELAY_ORIGIN}/api/auth/google/callback`)}&` +
+        `response_type=token&` +
+        `scope=${encodeURIComponent(scope)}&` +
+        `prompt=consent`;
+      runDesktopOAuth('google_drive', authorizeUrl)
+        .then(({ accessToken, expiresIn }) => {
+          saveAuthState('google_drive', {
+            provider: 'google_drive',
+            accessToken,
+            expiresAt: Date.now() + (expiresIn * 1000),
+            scope: [scope],
+          });
+          listGoogleDriveFiles();
+        })
+        .catch((e) => setErrorMsg(e?.message || 'Google sign-in failed.'));
+      return;
+    }
+
+    const redirectUri = `${window.location.origin}/api/auth/google/callback`;
 
     const state = btoa(JSON.stringify({ provider: 'google_drive', nonce: Math.random() }));
 
@@ -278,6 +307,26 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
       setErrorMsg('Dropbox is not configured in this build (missing NEXT_PUBLIC_DROPBOX_CLIENT_ID).');
       return;
     }
+    // Desktop: system browser + loopback relay (see lib/cloudDesktopAuth).
+    if (isDesktopRuntime()) {
+      const authorizeUrl = `https://www.dropbox.com/oauth2/authorize?` +
+        `client_id=${clientId}&` +
+        `redirect_uri=${encodeURIComponent(`${DESKTOP_RELAY_ORIGIN}/api/auth/dropbox/callback`)}&` +
+        `response_type=token`;
+      runDesktopOAuth('dropbox', authorizeUrl)
+        .then(({ accessToken, expiresIn }) => {
+          saveAuthState('dropbox', {
+            provider: 'dropbox',
+            accessToken,
+            expiresAt: Date.now() + ((expiresIn || 4 * 60 * 60) * 1000), // Dropbox tokens are 4 hours
+            scope: ['files.content.read', 'files.content.write'],
+          });
+          listDropboxFiles();
+        })
+        .catch((e) => setErrorMsg(e?.message || 'Dropbox sign-in failed.'));
+      return;
+    }
+
     const redirectUri = `${window.location.origin}/api/auth/dropbox/callback`;
 
     // Implicit token flow returns a short-lived (~4h) access token in the URL
@@ -475,8 +524,30 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
       setErrorMsg('OneDrive is not configured in this build (missing NEXT_PUBLIC_ONEDRIVE_CLIENT_ID).');
       return;
     }
-    const redirectUri = `${window.location.origin}/api/auth/onedrive/callback`;
     const scope = 'files.readwrite';
+
+    // Desktop: system browser + loopback relay (see lib/cloudDesktopAuth).
+    if (isDesktopRuntime()) {
+      const authorizeUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?` +
+        `client_id=${clientId}&` +
+        `redirect_uri=${encodeURIComponent(`${DESKTOP_RELAY_ORIGIN}/api/auth/onedrive/callback`)}&` +
+        `response_type=token&` +
+        `scope=${encodeURIComponent(scope)}`;
+      runDesktopOAuth('onedrive', authorizeUrl)
+        .then(({ accessToken, expiresIn }) => {
+          saveAuthState('onedrive', {
+            provider: 'onedrive',
+            accessToken,
+            expiresAt: Date.now() + (expiresIn * 1000),
+            scope: [scope],
+          });
+          listOneDriveFiles();
+        })
+        .catch((e) => setErrorMsg(e?.message || 'OneDrive sign-in failed.'));
+      return;
+    }
+
+    const redirectUri = `${window.location.origin}/api/auth/onedrive/callback`;
 
     // Use the /consumers endpoint so sign-in is scoped to personal Microsoft
     // accounts (personal OneDrive). This avoids AADSTS700016 when a user is

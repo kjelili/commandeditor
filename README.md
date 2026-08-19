@@ -97,6 +97,8 @@ NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
 
 Any provider without a client ID is hidden automatically — the cloud panel never launches a half-configured OAuth flow, and with no IDs at all it explains that local files still work.
 
+On the **desktop app**, cloud sign-in opens your system browser (Google blocks embedded webviews) and the token returns through a loopback listener in the Rust shell, relayed by the same registered `commandeditor.com` callback pages — so the exact same OAuth client IDs power web and desktop with no extra provider-side setup.
+
 ---
 
 ## All tools
