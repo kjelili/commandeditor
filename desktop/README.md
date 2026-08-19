@@ -31,6 +31,16 @@ git tag desktop-v1.1.0 && git push origin desktop-v1.1.0
 - Rust toolchain (`rustup`), plus Tauri OS deps: https://tauri.app/start/prerequisites/
 - `cargo install tauri-cli`
 
+## Rust backend scope
+
+`src-tauri/src/main.rs` is deliberately minimal (tray, close-to-tray, global
+shortcuts, notifications, multi-window) — every PDF operation already runs in
+the webview's TypeScript/WASM stack. The original 12-command scaffold
+(lopdf/pdfium/notify) never compiled and is archived as
+`src/main_extras.rs.txt`; reintroduce native commands one at a time, behind CI.
+Cargo features must mirror `tauri.conf.json > allowlist` — enforced by
+`tests/desktop.test.mts`.
+
 ## Development
 ```bash
 # from the repo root — terminal 1:

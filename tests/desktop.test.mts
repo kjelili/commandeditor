@@ -62,4 +62,35 @@ await ok('desktop package.json provides the tauri CLI', () => {
   assert.ok(pkg.devDependencies['@tauri-apps/cli'])
 })
 
+
+await ok('Cargo features mirror the allowlist (tauri-codegen invariant)', () => {
+  // tauri 1.x fails the build when an allowlist module lacks its Cargo feature.
+  const conf2 = JSON.parse(readFileSync(join(tauriDir, 'tauri.conf.json'), 'utf8'))
+  const al = conf2.tauri.allowlist
+  const feats = [...cargo.matchAll(/"([a-z0-9-]+)"/g)].map(m => m[1])
+  const need: [boolean, string][] = [
+    [!!al.shell?.open, 'shell-open'],
+    [!!al.dialog?.open, 'dialog-open'],
+    [!!al.dialog?.save, 'dialog-save'],
+    [!!al.globalShortcut?.all, 'global-shortcut'],
+    [!!al.notification?.all, 'notification-all'],
+    [!!al.clipboard?.writeText, 'clipboard-write-text'],
+    [!!al.clipboard?.readText, 'clipboard-read-text'],
+    [!!al.window?.show, 'window-show'],
+    [!!al.window?.hide, 'window-hide'],
+    [!!al.window?.setFocus, 'window-set-focus'],
+    [!!al.window?.startDragging, 'window-start-dragging'],
+    [!!al.window?.print, 'window-print'],
+  ]
+  for (const [enabled, feat] of need) {
+    assert.equal(feats.includes(feat), enabled, `feature ${feat} mismatch with allowlist`)
+  }
+  assert.ok(feats.includes('system-tray'), 'system-tray feature required by config')
+  // heavy native deps stay out of the stable build (archived in main_extras.rs.txt)
+  for (const heavy of ['lopdf', 'pdfium-render', 'notify', 'reqwest']) {
+    assert.ok(!cargo.includes(heavy), `${heavy} should not be a build dependency`)
+  }
+  assert.ok(existsSync(join(tauriDir, 'src', 'main_extras.rs.txt')), 'archived extras missing')
+})
+
 console.log(`\n${passed} passed, ${process.exitCode ? 'FAILURES' : '0 failures'}`)

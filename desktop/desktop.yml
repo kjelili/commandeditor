@@ -23,9 +23,9 @@ jobs:
         os: [ubuntu-22.04, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
 
@@ -41,6 +41,11 @@ jobs:
         run: pnpm build
         env:
           TAURI_BUILD: '1'
+
+      - name: Install desktop npm dependencies (Tauri CLI)
+        # tauri-action invokes `npm run tauri build` inside desktop/ — the
+        # @tauri-apps/cli devDependency must be installed first (exit 127 fix).
+        run: cd desktop && npm install
 
       - uses: dtolnay/rust-toolchain@stable
 
