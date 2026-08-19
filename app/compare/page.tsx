@@ -11,6 +11,7 @@ const COMPARISONS = [
   { slug: 'ilovepdf', name: 'iLovePDF', hook: 'The market leader — with server uploads and free-tier caps.' },
   { slug: 'smallpdf', name: 'Smallpdf', hook: 'Beautiful UI, two free tasks a day, ~$10/month after that.' },
   { slug: 'adobe', name: 'Adobe Acrobat Online', hook: 'The original — sign-in walls and a $240/year Pro tier.' },
+  { slug: 'pdf24', name: 'PDF24', hook: 'Genuinely free — but uploads files online, shows ads, Windows-only desktop.' },
 ]
 
 export default function CompareIndex() {

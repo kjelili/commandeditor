@@ -3,7 +3,7 @@ import ComparePage from '@/components/ComparePage'
 
 export const metadata: Metadata = {
   title: 'CommandEditor vs Smallpdf — the free-tier reality check',
-  description: 'Smallpdf limits free users to a couple of tasks per day and uploads files. CommandEditor offers 80+ private in-browser tools with no daily limits, no account, and offline support.',
+  description: 'Smallpdf limits free users to a couple of tasks per day and uploads files. CommandEditor offers 110+ private in-browser tools with no daily limits, no account, and offline support.',
   alternates: { canonical: 'https://commandeditor.com/compare/smallpdf' },
 }
 
@@ -17,7 +17,7 @@ export default function Page() {
         { feature: 'Files leave your device', ce: 'Never', them: 'Every task' },
         { feature: 'Account wall', ce: 'None', them: 'Yes, for repeat use' },
         { feature: 'Pro price', ce: 'Free forever', them: '~$9–12/month' },
-        { feature: 'Tool count', ce: '80+', them: '~20' },
+        { feature: 'Tool count', ce: '110+', them: '~20' },
         { feature: 'Offline / PWA', ce: true, them: false },
         { feature: 'Voice + typed commands', ce: true, them: false },
         { feature: 'On-device AI (summary, translate, Q&A)', ce: true, them: 'Cloud AI (paid)' },

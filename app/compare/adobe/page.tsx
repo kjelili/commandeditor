@@ -3,7 +3,7 @@ import ComparePage from '@/components/ComparePage'
 
 export const metadata: Metadata = {
   title: 'CommandEditor vs Adobe Acrobat Online — free without the sign-in wall',
-  description: 'Adobe Acrobat Online requires sign-in and uploads; Acrobat Pro costs $240/year. CommandEditor gives you 80+ PDF tools in-browser with zero uploads and zero cost.',
+  description: 'Adobe Acrobat Online requires sign-in and uploads; Acrobat Pro costs $240/year. CommandEditor gives you 110+ PDF tools in-browser with zero uploads and zero cost.',
   alternates: { canonical: 'https://commandeditor.com/compare/adobe' },
 }
 
@@ -17,7 +17,7 @@ export default function Page() {
         { feature: 'Files leave your device', ce: 'Never', them: 'Every task' },
         { feature: 'Full editing cost', ce: 'Free', them: '~$240/year (Pro)' },
         { feature: 'OCR free', ce: true, them: 'Paid' },
-        { feature: 'Tool count (free)', ce: '80+', them: 'Handful (teaser tier)' },
+        { feature: 'Tool count (free)', ce: '110+', them: 'Handful (teaser tier)' },
         { feature: 'Offline / PWA', ce: true, them: false },
         { feature: 'Voice commands', ce: true, them: false },
         { feature: 'On-device AI', ce: true, them: 'Cloud AI (paid)' },
