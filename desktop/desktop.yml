@@ -29,8 +29,12 @@ jobs:
         with:
           node-version: 22
 
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@9.15.9 --activate
+      - name: Install pnpm
+        # corepack no longer lands pnpm on PATH reliably on hosted runners —
+        # the official action does, on all three OSes.
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
 
       - name: Install web dependencies
         # --ignore-scripts: sharp's postinstall build is unnecessary
