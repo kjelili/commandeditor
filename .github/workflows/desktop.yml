@@ -11,6 +11,12 @@ on:
     tags:
       - 'desktop-v*'
 
+# tauri-action creates a GitHub Release on tag builds — that needs write access
+# to repo contents. Without this the run fails with
+# "Resource not accessible by integration".
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -29,19 +35,13 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          # NOTE: deliberately NO `cache: pnpm`.
-          # setup-node's package-manager cache runs `pnpm store path` during
-          # setup; on these runners pnpm isn't on PATH at that moment, which
-          # fails with "Unable to locate executable file: pnpm" on all 3 OSes.
-          # pnpm/action-setup (above) already puts pnpm on PATH for the run
-          # steps below, so the cache line is both unnecessary and the cause.
+          # No `cache: pnpm` — it runs `pnpm store path` before pnpm is on PATH
+          # and fails with "Unable to locate executable file: pnpm".
 
       - name: Verify pnpm is on PATH
         run: pnpm --version
 
       - name: Install web dependencies
-        # --ignore-scripts: sharp's postinstall build is unnecessary
-        # (images.unoptimized; webpack aliases sharp away)
         run: pnpm install --ignore-scripts
 
       - name: Build web app (static export for Tauri)
@@ -71,8 +71,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: desktop
-          tagName: desktop-v__VERSION__
-          releaseName: 'CommandEditor Desktop v__VERSION__'
+          # Only publish a Release on tag pushes. On manual (workflow_dispatch)
+          # runs, leaving these empty tells tauri-action to just build — no
+          # release is attempted, so no write permission is even exercised.
+          tagName: ${{ github.event_name == 'push' && 'desktop-v__VERSION__' || '' }}
+          releaseName: ${{ github.event_name == 'push' && 'CommandEditor Desktop v__VERSION__' || '' }}
           releaseBody: 'Native desktop build of CommandEditor — the private, in-browser PDF toolkit, now as an offline app.'
           releaseDraft: true
           prerelease: false
