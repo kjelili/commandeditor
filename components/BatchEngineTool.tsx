@@ -90,7 +90,7 @@ export default function BatchEngineTool({ files, onClose, showStatus }: Props) {
       for (const file of files) {
         let pageCount = 0
         if (file.name.toLowerCase().endsWith('.pdf')) {
-          try { pageCount = (await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise).numPages } catch {}
+          try { pageCount = (await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise).numPages } catch {}
         }
         const fileInfo = {
           file, name: file.name,

@@ -41,7 +41,7 @@ export default function AutoRedactTool({ file, onComplete, onClose, showStatus }
     try {
       const pdfjsLib = await import('pdfjs-dist')
       if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-      const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+      const doc = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
       const results: Finding[] = await suiteRef.current.scan(doc, { patterns: Array.from(activePatterns) })
       setFindings(results)
       setSelected(new Set(results.map(f => f.id)))

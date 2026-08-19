@@ -74,7 +74,7 @@ export class MultiDocCorpus {
     for (const file of files) {
       if (this.docs.includes(file.name)) continue
       onProgress?.(`Indexing ${file.name}…`)
-      const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+      const doc = await pdfjs.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
       const docChunks: CorpusChunk[] = []
       for (let p = 1; p <= doc.numPages; p++) {
         const page = await doc.getPage(p)

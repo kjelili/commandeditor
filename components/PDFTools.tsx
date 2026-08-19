@@ -84,7 +84,7 @@ const TOOLS = [
   { id: 'edit',        name: 'Annotate',    fullName: 'Annotate PDF',       emoji: '✐',  desc: 'Add text/marks',  requiresPDF: true,    color: '#f97316', colorLight: '#ffedd5' },
   { id: 'rotate',      name: 'Rotate',      fullName: 'Rotate Pages',       emoji: '↻',  desc: 'Fix orientation', requiresPDF: true,    color: '#6366f1', colorLight: '#e0e7ff' },
   { id: 'watermark',   name: 'Watermark',   fullName: 'Add Watermark',      emoji: '💧', desc: 'Brand pages',     requiresPDF: true,    color: '#b45309', colorLight: '#fef3c7' },
-  { id: 'convert',     name: 'PDF→Image',   fullName: 'Export PDF',         emoji: '⤓',  desc: 'PNG/JPG/Word',    requiresPDF: true,    color: '#0891b2', colorLight: '#cffafe' },
+  { id: 'convert',     name: 'PDF→Image',   fullName: 'Export PDF',         emoji: '⤓',  desc: 'PNG/JPG/editable Word', requiresPDF: true, color: '#0891b2', colorLight: '#cffafe' },
   { id: 'toPDF',       name: 'To PDF',      fullName: 'Convert to PDF',     emoji: '⤒',  desc: 'Images/docs',     requiresNonPDF: true, color: '#dc2626', colorLight: '#fee2e2' },
   { id: 'pagenum',     name: 'Page Nos.',   fullName: 'Add Page Numbers',   emoji: '🔢', desc: 'Auto number',     requiresPDF: true,    color: '#0369a1', colorLight: '#e0f2fe' },
   { id: 'extractimgs', name: 'Ext. Images', fullName: 'Extract Images',     emoji: '🖼', desc: 'Pull all images', requiresPDF: true,    color: '#0e7490', colorLight: '#e0f2fe' },
@@ -513,7 +513,7 @@ export default function PDFTools({
   const extractTextByPage = async (file: File): Promise<Array<{page:number;text:string}>> => {
     const pdfjsLib = await import('pdfjs-dist')
     if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+    const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
     const pages: Array<{page:number;text:string}> = []
     for (let i = 1; i <= pdf.numPages; i++) {
       const p = await pdf.getPage(i)
@@ -528,7 +528,7 @@ export default function PDFTools({
   const renderPDFToImages = async (file: File, scale = 1.2): Promise<string[]> => {
     const pdfjsLib = await import('pdfjs-dist')
     if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+    const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
     const images: string[] = []
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i)
@@ -1068,7 +1068,7 @@ export default function PDFTools({
       try {
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-        const pdf = await pdfjsLib.getDocument({ data: await pdfFiles[0].arrayBuffer() }).promise
+        const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await pdfFiles[0].arrayBuffer() }).promise
         const checks: Array<{id:string;label:string;pass:boolean;detail:string;severity:'critical'|'warning'|'info'}> = []
         // Check 1: Text layer present
         const p1 = await pdf.getPage(1)
@@ -1472,7 +1472,7 @@ export default function PDFTools({
         // Render first page and detect content bounds
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-        const pdf = await pdfjsLib.getDocument({ data: await pdfFiles[0].arrayBuffer() }).promise
+        const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await pdfFiles[0].arrayBuffer() }).promise
         const page = await pdf.getPage(1)
         const vp = page.getViewport({ scale: 0.5 })
         const canvas = document.createElement('canvas')
@@ -1656,7 +1656,7 @@ export default function PDFTools({
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc)
           pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-        const pdf = await pdfjsLib.getDocument({ data: await pdfFiles[0].arrayBuffer() }).promise
+        const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await pdfFiles[0].arrayBuffer() }).promise
         const rows: string[][] = []
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i)
@@ -2023,7 +2023,7 @@ export default function PDFTools({
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc)
           pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-        const pdf = await pdfjsLib.getDocument({ data: await pdfFiles[0].arrayBuffer() }).promise
+        const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await pdfFiles[0].arrayBuffer() }).promise
         const page = await pdf.getPage(Math.min(drawPageNum, pdf.numPages))
         const vp = page.getViewport({ scale: 1.5 })
         const canvas = document.createElement('canvas')
@@ -2425,10 +2425,15 @@ export default function PDFTools({
               <button key={fmt} onClick={() => setConvertFormat(fmt)}
                 className="py-2.5 rounded-xl text-sm font-semibold transition-all"
                 style={{ background: convertFormat===fmt ? 'var(--ink)' : 'var(--surface-2)', color: convertFormat===fmt ? 'white' : 'var(--ink)', border: `1.5px solid ${convertFormat===fmt ? 'var(--ink)' : 'var(--border)'}` }}>
-                {fmt.toUpperCase()}
+                {fmt === 'word' ? 'WORD ✎' : fmt.toUpperCase()}
               </button>
             ))}
           </div>
+          {convertFormat === 'word' && (
+            <p className="text-xs mb-3" style={{ color: 'rgba(10,10,15,0.45)' }}>
+              Editable document: headings, bold/italic, bullets and paragraphs rebuilt from the text layer. Scanned pages are kept as images.
+            </p>
+          )}
           <button onClick={() => handleToolAction('convert')} className="btn-primary w-full">
             Export as {convertFormat.toUpperCase()}
           </button>
@@ -3072,7 +3077,7 @@ export default function PDFTools({
               const pdfjsLib = await import('pdfjs-dist')
               if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
               const buf = await pdfF.arrayBuffer()
-              const pdf = await pdfjsLib.getDocument({ data: buf }).promise
+              const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: buf }).promise
               let foundText = false
               for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i)

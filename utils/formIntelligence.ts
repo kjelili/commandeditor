@@ -63,7 +63,7 @@ function nearestLabel(rect: { x: number; y: number; w: number; h: number }, item
 export async function detectFormFields(file: File): Promise<DetectedField[]> {
   const pdfjs = await loadPdfJs()
   const OPS = pdfjs.OPS
-  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+  const doc = await pdfjs.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const fields: DetectedField[] = []
 
   for (let p = 1; p <= doc.numPages; p++) {

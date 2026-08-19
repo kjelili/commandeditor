@@ -339,7 +339,7 @@ export async function estimateInkCoverage(
 ): Promise<InkEstimate> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const perPage: number[] = []
   
   for (let i = 1; i <= pdf.numPages; i++) {

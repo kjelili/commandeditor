@@ -24,7 +24,7 @@ export default function InvoiceParserTool({ file, onClose, showStatus }: Props) 
     try {
       const pdfjsLib = await import('pdfjs-dist')
       if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-      const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+      const doc = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
       const r = await parserRef.current.parse(doc)
       setResult(r)
       showStatus(`✓ Parsed as ${r.documentType} (${(r.confidence * 100).toFixed(0)}% confidence)`)

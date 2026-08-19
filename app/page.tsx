@@ -406,7 +406,7 @@ export default function Home() {
       try {
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-        const pdf = await pdfjsLib.getDocument({ data: await pdfFile.arrayBuffer() }).promise
+        const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await pdfFile.arrayBuffer() }).promise
         // Expose the live pdf.js document to the Plugin SDK (v10 gap fill:
         // the SDK's getPDFDocument() read this but nothing ever set it).
         ;(window as any).__ceActiveDocument = pdf

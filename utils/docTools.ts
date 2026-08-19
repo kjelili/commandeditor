@@ -50,7 +50,7 @@ export interface PdfLink { pageIndex: number; url: string | null; rect: number[]
 
 export async function listPDFLinks(file: File): Promise<PdfLink[]> {
   const pdfjsLib = await getPdfjs()
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const links: PdfLink[] = []
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
@@ -139,7 +139,7 @@ export function computeContactGrid(pageCount: number, cols: number): { cells: Gr
  *  Browser-only (canvas rendering via pdf.js). */
 export async function contactSheetPDF(file: File, cols = 4, onProgress?: (p: number, t: number) => void): Promise<Blob> {
   const pdfjsLib = await getPdfjs()
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const { PDFDocument } = await import('pdf-lib')
   const out = await PDFDocument.create()
   const SHEET_W = 842, SHEET_H = 595, MARGIN = 24, GAP = 10
@@ -180,7 +180,7 @@ export interface BookmarkItem { title: string; page: number; children?: Bookmark
 
 export async function exportBookmarks(file: File): Promise<{ blob: Blob; count: number }> {
   const pdfjsLib = await getPdfjs()
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const outline = await pdf.getOutline()
   async function convert(items: any[]): Promise<BookmarkItem[]> {
     const out: BookmarkItem[] = []

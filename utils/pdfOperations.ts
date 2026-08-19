@@ -44,7 +44,7 @@ export async function compressPDF(
   const pdfjsLib = await getPdfjs()
   const { jsPDF } = await import('jspdf')
   const buf = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: buf }).promise
   const jsPdfDoc = new jsPDF({ unit: 'pt', compress: true })
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
@@ -87,7 +87,7 @@ export async function convertPDFToImages(
   onProgress?: (page: number, total: number) => void
 ): Promise<Blob[]> {
   const pdfjsLib = await getPdfjs()
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const mime: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' }
   const blobs: Blob[] = []
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -197,7 +197,7 @@ export async function extractImagesPDF(
 ): Promise<Blob> {
   const pdfjsLib = await getPdfjs()
   const { default: JSZip } = await import('jszip')
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const zip = new JSZip()
   const folder = zip.folder('images')!
   const base = file.name.replace(/\.pdf$/i, '')
@@ -220,7 +220,7 @@ export async function flattenPDF(
 ): Promise<Blob> {
   const pdfjsLib = await getPdfjs()
   const { PDFDocument } = await import('pdf-lib')
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const out = await PDFDocument.create()
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
@@ -237,34 +237,61 @@ export async function flattenPDF(
   return pdfBlob(await out.save())
 }
 
-// ─── Convert PDF to Word (.docx) ─────────────────────────────────────────
+// ─── Convert PDF to Word (.docx, editable text) ───────────────────────────
+// Layout-aware conversion: real headings, bold/italic runs, bullet lists and
+// paragraphs rebuilt from the PDF text layer (see utils/wordConvert.ts).
+// Scanned pages without a text layer fall back to an embedded page image.
 export async function convertPDFToWord(file: File, onProgress?: (page: number, total: number) => void): Promise<Blob> {
   const pdfjsLib = await getPdfjs()
-  const { Document, Packer, Paragraph, ImageRun, PageOrientation } = await import('docx')
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
-  const sections = []
+  const { pageItemsToBlocks, buildWordDocument } = await import('./wordConvert')
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
+  const pages = []
+  const pageImages = new Map<number, { data: ArrayBuffer; ratio: number }>()
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
-    const vp = page.getViewport({ scale: 1.5 })
-    const canvas = document.createElement('canvas')
-    canvas.width = vp.width; canvas.height = vp.height
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
-    const imgBuffer = await new Promise<ArrayBuffer>(res => canvas.toBlob(b => b!.arrayBuffer().then(res), 'image/png'))
-    const ratio = vp.height / vp.width
-    const w = 6120000, h = Math.round(w * ratio)
-    sections.push({
-      properties: { page: {
-        size: vp.width > vp.height
-          ? { orientation: PageOrientation.LANDSCAPE, width: 15840000, height: 12240000 }
-          : { width: 12240000, height: 15840000 },
-        margin: { top: 360000, bottom: 360000, left: 360000, right: 360000 },
-      }},
-      children: [new Paragraph({ children: [new ImageRun({ data: imgBuffer, transformation: { width: Math.round(w/9144), height: Math.round(h/9144) }, type: 'png' })], spacing: { before: 0, after: 0 } })],
-    })
+    const vp = page.getViewport({ scale: 1 })
+    // Force font resolution so commonObjs can tell us the real base font
+    // name ("Helvetica-Bold") — getTextContent alone leaves fonts pending.
+    try { await page.getOperatorList() } catch { /* cosmetic only */ }
+    const tc = await page.getTextContent()
+    const baseFont = (fn: string): string => {
+      try {
+        const objs = (page as any).commonObjs
+        return objs?.has(fn) ? (objs.get(fn)?.name ?? '') : ''
+      } catch { return '' }
+    }
+    const items = tc.items
+      .filter((it: any) => typeof it.str === 'string')
+      .map((it: any) => ({
+        str: it.str as string,
+        x: it.transform[4] as number,
+        y: it.transform[5] as number,
+        width: (it.width ?? 0) as number,
+        height: (it.height || Math.abs(it.transform[3]) || 12) as number,
+        // pdf.js renames fonts ("g_d0_f1"); the Bold/Italic suffix lives on
+        // the resolved base name — pass every alias we have.
+        fontName: `${baseFont(it.fontName)} ${it.fontName} ${(tc.styles as any)?.[it.fontName]?.fontFamily ?? ''}`,
+      }))
+    const content = pageItemsToBlocks(items, vp.width)
+    if (!content.hasText) {
+      // Scanned page — keep the content as a full-page image instead of
+      // silently dropping it. (Requires a DOM canvas; browsers only.)
+      const scale = 1.5
+      const cvp = page.getViewport({ scale })
+      const canvas = document.createElement('canvas')
+      canvas.width = cvp.width; canvas.height = cvp.height
+      await page.render({ canvasContext: canvas.getContext('2d')!, viewport: cvp }).promise
+      const imgBuffer = await new Promise<ArrayBuffer>(res => canvas.toBlob(b => b!.arrayBuffer().then(res), 'image/png'))
+      pageImages.set(i - 1, { data: imgBuffer, ratio: cvp.height / cvp.width })
+    }
+    pages.push(content)
     onProgress?.(i, pdf.numPages)
   }
-  const buf = await Packer.toBuffer(new Document({ sections }))
-  return new Blob([buf as unknown as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+  const buf = await buildWordDocument(pages, {
+    title: file.name.replace(/\.pdf$/i, ''),
+    pageImages,
+  })
+  return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
 }
 
 // ─── Download helper ──────────────────────────────────────────────────────
@@ -322,7 +349,7 @@ export async function extractTextFromPDF(
   onProgress?: (page: number, total: number) => void
 ): Promise<Blob> {
   const pdfjsLib = await getPdfjs()
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const lines: string[] = []
   if (format === 'md') lines.push(`# ${file.name.replace(/\.pdf$/i, '')}\n`)
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -457,7 +484,7 @@ export async function grayscalePDF(
 ): Promise<Blob> {
   const pdfjsLib = await getPdfjs()
   const { PDFDocument } = await import('pdf-lib')
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const out = await PDFDocument.create()
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
@@ -549,7 +576,7 @@ export async function pdfToPPTX(
 ): Promise<Blob> {
   const pdfjsLib = await getPdfjs()
   const { default: JSZip } = await import('jszip')
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const numPages = pdf.numPages
 
   // Render all pages to JPEG data URLs
@@ -678,7 +705,7 @@ export async function ocrPDF(
   const out = await PDFDocument.create()
   const font = await out.embedFont(StandardFonts.Helvetica)
 
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const total = pdf.numPages
 
   // Create Tesseract worker

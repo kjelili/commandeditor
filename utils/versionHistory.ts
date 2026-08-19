@@ -96,7 +96,7 @@ export async function diffSnapshotsText(a: ArrayBuffer, b: ArrayBuffer): Promise
   pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
   const extract = async (buf: ArrayBuffer): Promise<string[]> => {
-    const doc = await pdfjs.getDocument({ data: buf }).promise
+    const doc = await pdfjs.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: buf }).promise
     const lines: string[] = []
     for (let p = 1; p <= doc.numPages; p++) {
       const page = await doc.getPage(p)

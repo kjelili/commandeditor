@@ -54,7 +54,7 @@ export const PDFInPlaceEditor: React.FC<Props> = ({ pdfBytes, fileName, onSave, 
   const loadPDF = async () => {
     // Copy the bytes for pdf.js — it transfers/detaches the buffer to its
     // worker, which would otherwise leave pdfBytes empty for the pdf-lib save.
-    const pdf = await pdfjs.getDocument({ data: pdfBytes.slice() }).promise;
+    const pdf = await pdfjs.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: pdfBytes.slice() }).promise;
     pdfDocRef.current = pdf;
     const pageData: Array<{ width: number; height: number; textItems: PDFTextItem[] }> = [];
 

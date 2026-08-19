@@ -88,7 +88,7 @@ export default function PDFViewer({
         if (!isProcessed) setError('preview-not-pdf'); return;
       }
       const pdfjsLib = await initPdfjs();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+      const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: arrayBuffer.slice(0) }).promise;
 
       if (!isProcessed) {
         setTotalPages(pdf.numPages);

@@ -135,7 +135,7 @@ export interface AttachmentInfo { name: string; size: number; data: Uint8Array }
 export async function extractEmbeddedAttachments(file: File): Promise<AttachmentInfo[]> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
 
   const out: AttachmentInfo[] = []
   const collect = (attachments: any) => {
@@ -193,7 +193,7 @@ export async function findDuplicatePages(
 ): Promise<DupeGroup[]> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
 
   const hashes: bigint[] = []
   for (let p = 1; p <= pdf.numPages; p++) {
@@ -260,7 +260,7 @@ export async function autoFixAccessibility(file: File, language = 'en'): Promise
   const skipped: string[] = []
 
   // Guess a title: biggest text item on page 1
-  const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: bytes.slice(0) }).promise
   const page1 = await pdf.getPage(1)
   const tc = await page1.getTextContent()
   let best = '', bestH = 0
@@ -295,7 +295,7 @@ export interface SpeechChapter { page: number; text: string; words: number }
 export async function extractSpeechChapters(file: File): Promise<SpeechChapter[]> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const chapters: SpeechChapter[] = []
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p)

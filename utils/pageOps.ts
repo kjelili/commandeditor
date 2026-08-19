@@ -30,7 +30,7 @@ export async function reversePageOrder(file: File): Promise<Blob> {
 // vector drawing ops. Vector-only pages (charts, dividers) are kept.
 export async function findBlankPages(file: File): Promise<number[]> {
   const pdfjsLib = await getPdfjs()
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const blanks: number[] = []
   const OPS = pdfjsLib.OPS
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -101,7 +101,7 @@ export interface OutlineStart { title: string; pageIndex: number }
 // skipped; duplicates and page-0 lead-ins are normalised by the caller.
 export async function getOutlineStarts(file: File): Promise<OutlineStart[]> {
   const pdfjsLib = await getPdfjs()
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const outline = await pdf.getOutline()
   if (!outline || outline.length === 0) return []
   const starts: OutlineStart[] = []

@@ -31,7 +31,7 @@ export default function PDFHealthScore({ file, onSuggestTools }: Props) {
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc)
           pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
         const buf = await file.arrayBuffer()
-        const pdf = await pdfjsLib.getDocument({ data: buf }).promise
+        const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: buf }).promise
         if (cancelled) return
 
         const page1 = await pdf.getPage(1)

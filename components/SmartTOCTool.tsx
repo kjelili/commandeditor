@@ -28,7 +28,7 @@ export default function SmartTOCTool({ file, onComplete, onClose, showStatus }: 
     try {
       const pdfjsLib = await import('pdfjs-dist')
       if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-      const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+      const doc = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
       const gen = new SmartTOCGenerator()
       const result = await gen.generate(doc)
       const flat: Heading[] = result.flat.map((h: any) => ({ text: h.text, page: h.page, level: h.level || 1 }))

@@ -27,7 +27,7 @@ export default function ContractClausesTool({ file, onClose, showStatus }: Props
     try {
       const pdfjsLib = await import('pdfjs-dist')
       if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-      const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+      const doc = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
       const r = await extractorRef.current.extract(doc)
       setResult(r)
       const n = r.clauses?.length ?? 0

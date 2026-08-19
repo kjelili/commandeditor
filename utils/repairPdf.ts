@@ -62,7 +62,7 @@ async function repairRebuild(bytes: Uint8Array): Promise<RepairResult> {
 async function repairRasterize(bytes: Uint8Array, onProgress?: (p: number, t: number) => void): Promise<RepairResult> {
   const pdfjsLib = await getPdfjs()
   const clean = sanitisePdfBytes(bytes)
-  const pdf = await pdfjsLib.getDocument({ data: clean.slice() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: clean.slice() }).promise
   const { PDFDocument } = await import('pdf-lib')
   const out = await PDFDocument.create()
   for (let i = 1; i <= pdf.numPages; i++) {

@@ -68,7 +68,7 @@ export default function BarcodeTool({ file, onComplete, onClose, showStatus }: P
     try {
       const pdfjsLib = await import('pdfjs-dist')
       if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-      const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+      const doc = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
       const found: Array<{ page: number; data: string }> = []
       for (let i = 1; i <= doc.numPages; i++) {
         const r = await suiteRef.current.scanPDFPage(await doc.getPage(i), i)

@@ -65,7 +65,7 @@ export default function CollabTool({ file, showStatus, onClose }: Props) {
       try {
         const pdfjs = await import('pdfjs-dist')
         pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-        const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+        const doc = await pdfjs.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
         setPageCount(doc.numPages)
         await doc.destroy()
       } catch {}

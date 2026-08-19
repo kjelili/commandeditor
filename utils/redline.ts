@@ -22,7 +22,7 @@ export interface TextHit { page: number; x: number; y: number; w: number; h: num
 export async function findText(file: File, needle: string): Promise<TextHit | null> {
   const pdfjs = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+  const doc = await pdfjs.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   try {
     for (let p = 1; p <= doc.numPages; p++) {
       const page = await doc.getPage(p)

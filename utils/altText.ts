@@ -21,7 +21,7 @@ export interface PdfImage {
 export async function extractImages(file: File, maxImages = 24): Promise<PdfImage[]> {
   const pdfjs = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+  const doc = await pdfjs.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const images: PdfImage[] = []
 
   for (let p = 1; p <= doc.numPages && images.length < maxImages; p++) {

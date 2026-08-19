@@ -56,7 +56,7 @@ function titleFromContext(context: string, dateStr: string): string {
 export async function extractDeadlines(file: File): Promise<DeadlineEvent[]> {
   const pdfjs = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+  const doc = await pdfjs.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const textByPage: Array<{ page: number; text: string }> = []
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p)

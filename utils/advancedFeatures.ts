@@ -459,7 +459,7 @@ export async function runPrintPreflight(file: File): Promise<PreflightReport> {
 
   const buf = await file.arrayBuffer()
   const doc = await PDFDocument.load(buf, { ignoreEncryption: true })
-  const pdfjs = await pdfjsLib.getDocument({ data: buf }).promise
+  const pdfjs = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: buf }).promise
   const checks: PreflightCheck[] = []
 
   // 1. Fonts embedded
@@ -547,7 +547,7 @@ export async function runPrintPreflight(file: File): Promise<PreflightReport> {
 export async function pdfToEmailHTML(file: File): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   
   // Only process first page for email
   const page = await pdf.getPage(1)

@@ -37,7 +37,7 @@ export default function ProfilerBanner({ file, onSelectTool }: Props) {
       try {
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-        const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+        const doc = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
         const profiler = new DocumentProfiler()
         const analysis = await profiler.analyze(doc)
         if (!cancelled && analysis.primary) {

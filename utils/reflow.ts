@@ -23,7 +23,7 @@ export const DEFAULT_REFLOW: ReflowOptions = {
 export async function extractPagesText(file: File): Promise<string[]> {
   const pdfjs = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+  const doc = await pdfjs.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const pages: string[] = []
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p)

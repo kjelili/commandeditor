@@ -19,7 +19,7 @@ export async function pdfToEpub(file: File, title?: string): Promise<Blob> {
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
   const { default: JSZip } = await import('jszip')
 
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const bookTitle = (title || file.name.replace(/\.pdf$/i, '')).slice(0, 120)
   const id = 'urn:commandeditor:' + Date.now().toString(36)
 

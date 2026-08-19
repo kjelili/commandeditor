@@ -28,7 +28,7 @@ export default function CitationExtractorTool({ file, onClose, showStatus }: Pro
     try {
       const pdfjsLib = await import('pdfjs-dist')
       if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-      const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+      const doc = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
       const results = await new CitationExtractor().extract(doc)
       setCites(results)
       showStatus(results.length ? `✓ ${results.length} citation${results.length > 1 ? 's' : ''} found` : 'No citations found')
