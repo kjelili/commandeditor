@@ -16,6 +16,10 @@ const nextConfig = {
   // Keep trailing slashes for URL consistency
   trailingSlash: true,
 
+  // Static export only for the Tauri desktop bundle (TAURI_BUILD=1 pnpm build
+  // → out/, consumed by desktop/src-tauri). Web/Vercel builds are unaffected.
+  ...(process.env.TAURI_BUILD ? { output: 'export' } : {}),
+
   // Disable Next.js image optimization — we don't use next/image
   images: {
     unoptimized: true,

@@ -1,0 +1,77 @@
+# CommandEditor Desktop release pipeline
+#
+# Triggers:
+#   - tag push `desktop-v*`  → full matrix build + GitHub Release with installers
+#   - workflow_dispatch      → full matrix build, artifacts only (no release)
+#
+# Each job: builds the web app as a static export (TAURI_BUILD=1 → out/),
+# then lets tauri-action compile the Rust shell and bundle native installers
+# (.AppImage/.deb on Linux, .msi/.exe on Windows, .dmg on macOS).
+name: desktop-release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'desktop-v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@9.15.9 --activate
+
+      - name: Install web dependencies
+        # --ignore-scripts: sharp's postinstall build is unnecessary
+        # (images.unoptimized; webpack aliases sharp away)
+        run: pnpm install --ignore-scripts
+
+      - name: Build web app (static export for Tauri)
+        run: pnpm build
+        env:
+          TAURI_BUILD: '1'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Install Linux system dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Build desktop app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          tagName: desktop-v__VERSION__
+          releaseName: 'CommandEditor Desktop v__VERSION__'
+          releaseBody: 'Native desktop build of CommandEditor — the private, in-browser PDF toolkit, now as an offline app.'
+          releaseDraft: true
+          prerelease: false
+
+      - name: Upload bundles (manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: commandeditor-desktop-${{ matrix.os }}
+          path: |
+            desktop/src-tauri/target/release/bundle/**
+          if-no-files-found: warn
