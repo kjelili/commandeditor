@@ -3,10 +3,6 @@
 # Triggers:
 #   - tag push `desktop-v*`  → full matrix build + GitHub Release with installers
 #   - workflow_dispatch      → full matrix build, artifacts only (no release)
-#
-# Each job: builds the web app as a static export (TAURI_BUILD=1 → out/),
-# then lets tauri-action compile the Rust shell and bundle native installers
-# (.AppImage/.deb on Linux, .msi/.exe on Windows, .dmg on macOS).
 name: desktop-release
 
 on:
@@ -25,16 +21,23 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-
       - name: Install pnpm
-        # corepack no longer lands pnpm on PATH reliably on hosted runners —
-        # the official action does, on all three OSes.
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.9
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          # NOTE: deliberately NO `cache: pnpm`.
+          # setup-node's package-manager cache runs `pnpm store path` during
+          # setup; on these runners pnpm isn't on PATH at that moment, which
+          # fails with "Unable to locate executable file: pnpm" on all 3 OSes.
+          # pnpm/action-setup (above) already puts pnpm on PATH for the run
+          # steps below, so the cache line is both unnecessary and the cause.
+
+      - name: Verify pnpm is on PATH
+        run: pnpm --version
 
       - name: Install web dependencies
         # --ignore-scripts: sharp's postinstall build is unnecessary
@@ -47,8 +50,6 @@ jobs:
           TAURI_BUILD: '1'
 
       - name: Install desktop npm dependencies (Tauri CLI)
-        # tauri-action invokes `npm run tauri build` inside desktop/ — the
-        # @tauri-apps/cli devDependency must be installed first (exit 127 fix).
         run: cd desktop && npm install
 
       - uses: dtolnay/rust-toolchain@stable
