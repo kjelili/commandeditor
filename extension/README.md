@@ -9,6 +9,22 @@ straight into the private, in-browser toolkit. No uploads, ever.
 2. Enable **Developer mode** (top right)
 3. Click **Load unpacked** and select this `extension/` folder
 
+## Publish (maintainer)
+
+The extension is Chrome Web Store–ready (MV3, single `contextMenus`
+permission, no host access, no remote code):
+
+```bash
+node scripts/pack-extension.mjs   # → extension/dist/commandeditor-extension-<version>.zip
+```
+
+Upload the zip in the [Chrome Web Store developer console](https://chrome.google.com/webstore/devconsole).
+Listing copy, permission justifications and the screenshot checklist live in
+[STORE_LISTING.md](./STORE_LISTING.md). `tests/extension.test.mts` validates
+the manifest, icons, privacy posture and the packed zip — run it before every
+version bump.
+
+
 ## What it does
 
 - **Context menu on PDF links**: opens `commandeditor.com/?import=<url>` —

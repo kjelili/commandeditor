@@ -1,22 +1,29 @@
 {
   "manifest_version": 3,
   "name": "CommandEditor — Open PDFs in your private editor",
-  "version": "1.0.0",
-  "description": "Right-click any PDF link to open it in CommandEditor — the PDF toolkit that runs 100% in your browser. No uploads, no accounts, no tracking.",
-  "permissions": ["contextMenus"],
+  "version": "1.1.0",
+  "description": "Right-click any PDF link to open it in CommandEditor — private, in-browser PDF tools. No uploads, no accounts, no tracking.",
+  "permissions": [
+    "contextMenus"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
+      "16": "icon16.png",
+      "32": "icon32.png",
       "48": "icon48.png",
       "128": "icon128.png"
     }
   },
   "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
     "48": "icon48.png",
     "128": "icon128.png"
   },
-  "homepage_url": "https://commandeditor.com"
+  "homepage_url": "https://commandeditor.com",
+  "author": "CommandEditor"
 }
