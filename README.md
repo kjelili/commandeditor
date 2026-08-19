@@ -95,6 +95,8 @@ NEXT_PUBLIC_DROPBOX_CLIENT_ID=your_dropbox_app_key
 NEXT_PUBLIC_ONEDRIVE_CLIENT_ID=your_azure_client_id
 ```
 
+Any provider without a client ID is hidden automatically — the cloud panel never launches a half-configured OAuth flow, and with no IDs at all it explains that local files still work.
+
 ---
 
 ## All tools

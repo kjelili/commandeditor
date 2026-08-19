@@ -10,6 +10,10 @@
 
 import React, { useState, useEffect } from 'react';
 import type { CloudProvider, CloudFile, CloudAuthState } from '../types';
+import {
+  isCloudProviderConfigured,
+  filterConfiguredProviders,
+} from '../lib/cloudConfig';
 
 interface Props {
   onFileSelect: (bytes: Uint8Array, name: string) => void;
@@ -22,6 +26,12 @@ const PROVIDERS: { id: CloudProvider; name: string; icon: string; color: string 
   { id: 'dropbox', name: 'Dropbox', icon: '📦', color: '#0061ff' },
   { id: 'onedrive', name: 'OneDrive', icon: '☁️', color: '#0078d4' },
 ];
+
+// Only providers with an OAuth client ID baked in at build time are usable.
+// Launching OAuth with an empty client_id sends the user to the provider's
+// opaque error page (Google "Error 400", Dropbox "Invalid client_id",
+// Microsoft AADSTS900144) — so unconfigured providers are hidden instead.
+const CONFIGURED_PROVIDERS = filterConfiguredProviders(PROVIDERS);
 
 export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, mode }) => {
   const [authStates, setAuthStates] = useState<Record<CloudProvider, CloudAuthState | null>>({
@@ -73,6 +83,10 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
   // ===== GOOGLE DRIVE =====
   const authGoogleDrive = () => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+    if (!clientId) {
+      setErrorMsg('Google Drive is not configured in this build (missing NEXT_PUBLIC_GOOGLE_CLIENT_ID).');
+      return;
+    }
     const redirectUri = `${window.location.origin}/api/auth/google/callback`;
     const scope = 'https://www.googleapis.com/auth/drive.file';
 
@@ -260,6 +274,10 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
   // ===== DROPBOX =====
   const authDropbox = () => {
     const clientId = process.env.NEXT_PUBLIC_DROPBOX_CLIENT_ID || '';
+    if (!clientId) {
+      setErrorMsg('Dropbox is not configured in this build (missing NEXT_PUBLIC_DROPBOX_CLIENT_ID).');
+      return;
+    }
     const redirectUri = `${window.location.origin}/api/auth/dropbox/callback`;
 
     // Implicit token flow returns a short-lived (~4h) access token in the URL
@@ -453,6 +471,10 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
   // ===== ONEDRIVE =====
   const authOneDrive = () => {
     const clientId = process.env.NEXT_PUBLIC_ONEDRIVE_CLIENT_ID || '';
+    if (!clientId) {
+      setErrorMsg('OneDrive is not configured in this build (missing NEXT_PUBLIC_ONEDRIVE_CLIENT_ID).');
+      return;
+    }
     const redirectUri = `${window.location.origin}/api/auth/onedrive/callback`;
     const scope = 'files.readwrite';
 
@@ -486,6 +508,10 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
 
   // Provider selection handler
   const handleProviderSelect = (provider: CloudProvider) => {
+    if (!isCloudProviderConfigured(provider)) {
+      setErrorMsg('This cloud provider is not configured in this build. You can still open files directly from your device.');
+      return;
+    }
     setSelectedProvider(provider);
     setErrorMsg(''); setFiles([]);
     if (!authStates[provider]) {
@@ -526,9 +552,39 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
       </h3>
 
       {/* Provider selection */}
-      {!selectedProvider && (
-        <div style={{ display: 'flex', gap: '12px' }}>
-          {PROVIDERS.map(provider => (
+      {!selectedProvider && CONFIGURED_PROVIDERS.length === 0 && (
+        <div style={{
+          padding: '16px',
+          borderRadius: '10px',
+          border: '1px solid #e5e7eb',
+          background: '#f9fafb',
+          fontSize: '13px',
+          color: '#4b5563',
+          lineHeight: 1.6,
+        }}>
+          <p style={{ fontWeight: 600, color: '#111827', marginBottom: '6px' }}>
+            Cloud import isn't set up in this build
+          </p>
+          <p style={{ marginBottom: '6px' }}>
+            No OAuth client IDs were configured when this app was built, so Google Drive,
+            Dropbox and OneDrive can't be connected here yet.
+          </p>
+          <p>
+            Everything still works with local files — open a PDF straight from your device
+            and it never leaves your machine. (Self-hosters: set{' '}
+            <code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code>, <code>NEXT_PUBLIC_DROPBOX_CLIENT_ID</code>{' '}
+            and/or <code>NEXT_PUBLIC_ONEDRIVE_CLIENT_ID</code> at build time to enable this.)
+          </p>
+        </div>
+      )}
+
+      {!selectedProvider && CONFIGURED_PROVIDERS.length > 0 && (
+        <div>
+          {errorMsg && (
+            <p style={{ marginBottom: '10px', fontSize: '13px', color: '#dc2626' }}>{errorMsg}</p>
+          )}
+          <div style={{ display: 'flex', gap: '12px' }}>
+          {CONFIGURED_PROVIDERS.map(provider => (
             <button
               key={provider.id}
               onClick={() => handleProviderSelect(provider.id)}
@@ -558,6 +614,7 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
               <span style={{ fontWeight: 500, fontSize: '14px' }}>{provider.name}</span>
             </button>
           ))}
+          </div>
         </div>
       )}
 
