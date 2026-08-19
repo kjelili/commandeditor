@@ -25,16 +25,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-
+      # pnpm BEFORE setup-node: setup-node v5's package-manager-cache detects
+      # "packageManager": "pnpm@..." in package.json and shells out to pnpm —
+      # it must already exist on PATH.
       - name: Install pnpm
-        # corepack no longer lands pnpm on PATH reliably on hosted runners —
-        # the official action does, on all three OSes.
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.9
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
 
       - name: Install web dependencies
         # --ignore-scripts: sharp's postinstall build is unnecessary
