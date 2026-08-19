@@ -37,8 +37,12 @@ await ok('distDir matches the Next static export produced by CI', () => {
   const next = readFileSync(join(root, 'next.config.js'), 'utf8')
   assert.ok(next.includes('TAURI_BUILD'), 'next.config.js must gate output:export on TAURI_BUILD')
 })
-await ok('updater disabled until a real endpoint exists', () => {
-  assert.equal(conf.tauri.bundle.updater.active, false)
+await ok('updater config removed until a real endpoint exists', () => {
+  // Tauri 1.x schema: updater belongs at tauri.updater, never under bundle —
+  // and with active:false it is dead weight. Reintroduce at the correct path
+  // only when a real update endpoint ships.
+  assert.ok(!('updater' in conf.tauri.bundle), 'updater must not live under tauri.bundle')
+  assert.ok(!('updater' in conf.tauri) || (conf.tauri.updater as any).active === false)
 })
 await ok('Cargo.toml metadata points at the real repo', () => {
   assert.ok(cargo.includes('repository = "https://github.com/kjelili/commandeditor"'))
