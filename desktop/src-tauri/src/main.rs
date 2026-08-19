@@ -13,8 +13,8 @@
 
 use std::collections::HashMap;
 use tauri::{
-    CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu,
-    SystemTrayMenuItem, WindowEvent,
+    CustomMenuItem, GlobalShortcutManager, Manager, SystemTray, SystemTrayEvent,
+    SystemTrayMenu, SystemTrayMenuItem, WindowEvent,
 };
 use uuid::Uuid;
 
