@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, type RefObject } from 'react'
 import { pdfBlob } from '@/utils/blob'
+import { IS_DESKTOP } from '@/utils/platform'
 import {
   computeReadability, scanForPII, diffPDFTexts, analyseTone, detectLanguage,
   extractCitations, extractTimeline, inspectFonts, estimateInkCoverage
@@ -2137,7 +2138,7 @@ export default function PDFTools({
           )}
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-2">
-          {TOOLS.filter(tool => !policy.disabledTools.includes(tool.id)).filter(tool => !toolSearch || tool.name.toLowerCase().includes(toolSearch.toLowerCase()) || tool.desc.toLowerCase().includes(toolSearch.toLowerCase()) || tool.fullName.toLowerCase().includes(toolSearch.toLowerCase())).map((tool) => {
+          {TOOLS.filter(tool => !(IS_DESKTOP && tool.id === 'cloudconnect')).filter(tool => !policy.disabledTools.includes(tool.id)).filter(tool => !toolSearch || tool.name.toLowerCase().includes(toolSearch.toLowerCase()) || tool.desc.toLowerCase().includes(toolSearch.toLowerCase()) || tool.fullName.toLowerCase().includes(toolSearch.toLowerCase())).map((tool) => {
             const disabled = (files.length === 0 && !NO_FILE_TOOLS.includes(tool.id)) ||
               (tool.requiresPDF && !hasPDFs) ||
               (tool.requiresNonPDF && !hasConvertible)

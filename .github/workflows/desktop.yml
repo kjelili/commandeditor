@@ -48,6 +48,7 @@ jobs:
         run: pnpm build
         env:
           TAURI_BUILD: '1'
+          NEXT_PUBLIC_TAURI_BUILD: '1'
 
       - name: Install desktop npm dependencies (Tauri CLI)
         run: cd desktop && npm install

@@ -19,6 +19,7 @@ import {
   runDesktopOAuth,
   DESKTOP_RELAY_ORIGIN,
 } from '../lib/cloudDesktopAuth';
+import { IS_DESKTOP } from '../utils/platform';
 
 interface Props {
   onFileSelect: (bytes: Uint8Array, name: string) => void;
@@ -39,6 +40,9 @@ const PROVIDERS: { id: CloudProvider; name: string; icon: string; color: string 
 const CONFIGURED_PROVIDERS = filterConfiguredProviders(PROVIDERS);
 
 export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, mode }) => {
+  // Cloud storage is disabled in the desktop app — the whole connector renders nothing.
+  if (IS_DESKTOP) return null;
+
   const [authStates, setAuthStates] = useState<Record<CloudProvider, CloudAuthState | null>>({
     google_drive: null,
     dropbox: null,

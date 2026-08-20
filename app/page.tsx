@@ -15,6 +15,7 @@ const PDFInPlaceEditor = dynamic(() => import('@/components/PDFInPlaceEditor').t
 const ESignatureWorkflow = dynamic(() => import('@/components/ESignatureWorkflow').then(m => m.ESignatureWorkflow), { ssr: false })
 const FormBuilder = dynamic(() => import('@/components/FormBuilder').then(m => m.FormBuilder), { ssr: false })
 const VisualDiff = dynamic(() => import('@/components/VisualDiff').then(m => m.VisualDiff), { ssr: false })
+import { IS_DESKTOP } from '@/utils/platform'
 const CloudConnector = dynamic(() => import('@/components/CloudConnector').then(m => m.CloudConnector), { ssr: false })
 const AIAssistant = dynamic(() => import('@/components/AIAssistant').then(m => m.AIAssistant), { ssr: false })
 
@@ -896,7 +897,7 @@ export default function Home() {
           )
         )}
 
-        {selectedTool === 'cloudconnect' && (
+        {selectedTool === 'cloudconnect' && !IS_DESKTOP && (
           <div id="cloudconnect-panel" className="card animate-fade-up space-y-4">
             <p className="text-sm" style={{ color: 'var(--ink-soft)' }}>
               ☁️ Import from or save to Google Drive, Dropbox or OneDrive. Files transfer directly between your browser

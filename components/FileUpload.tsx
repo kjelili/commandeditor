@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
+import { IS_DESKTOP } from '@/utils/platform'
 
 interface FileUploadProps {
   onFilesUpload: (files: File[]) => void
@@ -142,7 +143,9 @@ export default function FileUpload({ onFilesUpload, uploadedFiles }: FileUploadP
         />
       </div>
 
-      {/* Cloud import — routes to the real, OAuth-backed Cloud connector tool */}
+      {/* Cloud import — routes to the real, OAuth-backed Cloud connector tool.
+          Hidden in the desktop app, which has no cloud storage. */}
+      {!IS_DESKTOP && (
       <button
         onClick={() => {
           window.dispatchEvent(new CustomEvent('commandeditor-open-tool', { detail: { toolId: 'cloudconnect' } }))
@@ -156,6 +159,7 @@ export default function FileUpload({ onFilesUpload, uploadedFiles }: FileUploadP
         <span aria-hidden="true">☁️</span>
         Import from cloud — Drive, Dropbox, OneDrive
       </button>
+      )}
       <p className="text-xs mt-1.5 text-center" style={{ color: 'var(--ink-muted)' }}>
         Or paste a URL: <button onClick={async () => { const u = window.prompt('Paste a direct file URL:'); if (u) await fetchRemoteFile(u, 'remote-file.pdf') }}
           className="underline" style={{ color: 'var(--blue-vivid)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit' }}>
