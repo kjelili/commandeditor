@@ -21,10 +21,10 @@ export default function LegalPage({ title, updated, downloadHref, downloadName, 
           <Link href="/" className="flex items-center gap-3 group" aria-label="CommandEditor — home">
             <span className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
               <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-full h-full">
-                <defs><linearGradient id="ceGradLegal" x1="3" y1="3" x2="37" y2="37" gradientUnits="userSpaceOnUse"><stop stopColor="#3B82F6"/><stop offset="1" stopColor="#2563EB"/></linearGradient></defs>
-                <rect x="1" y="1" width="38" height="38" rx="11" fill="url(#ceGradLegal)"/>
-                <path d="M26.5 14.2 C 22.5 10.8, 15.5 11.8, 13.4 16.8 C 11.3 21.8, 14.6 27.4, 20 27.6 C 24.2 27.8, 27.4 24.6, 26.6 20.6 C 26.1 18.1, 23.4 16.8, 21.3 18" stroke="white" strokeWidth="3.1" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                <circle cx="26.9" cy="14.4" r="2.15" fill="white"/>
+                <defs><linearGradient id="ceGradLegal" x1="0" y1="0" x2="0" y2="40" gradientUnits="userSpaceOnUse"><stop stopColor="#131f37"/><stop offset="1" stopColor="#0a1120"/></linearGradient></defs>
+                <rect x="1.5" y="1.5" width="37" height="37" rx="11" fill="url(#ceGradLegal)" stroke="#3f5fb0" strokeOpacity="0.85" strokeWidth="1.4"/>
+                <g transform="translate(9,9) scale(0.917)" fill="none" stroke="#ffffff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></g>
+                
               </svg>
             </span>
             <span className="font-bold text-white group-hover:opacity-80 transition-opacity" style={{ fontFamily: 'Syne, sans-serif' }}>CommandEditor</span>

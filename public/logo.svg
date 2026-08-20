@@ -1,17 +1,12 @@
-<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CommandEditor logo">
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CommandEditor logo">
   <defs>
-    <linearGradient id="ceGrad" x1="3" y1="3" x2="37" y2="37" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#3B82F6"/>
-      <stop offset="1" stop-color="#2563EB"/>
+    <linearGradient id="ceBg" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#131f37"/>
+      <stop offset="1" stop-color="#0a1120"/>
     </linearGradient>
   </defs>
-  <rect x="1" y="1" width="38" height="38" rx="11" fill="url(#ceGrad)"/>
-  <!-- One continuous ribbon that loops through itself: reads as a 'C' with a knot -->
-  <path d="M26.5 14.2
-           C 22.5 10.8, 15.5 11.8, 13.4 16.8
-           C 11.3 21.8, 14.6 27.4, 20 27.6
-           C 24.2 27.8, 27.4 24.6, 26.6 20.6
-           C 26.1 18.1, 23.4 16.8, 21.3 18"
-        stroke="white" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <circle cx="26.9" cy="14.4" r="2.15" fill="white"/>
+  <rect x="26" y="26" width="460" height="460" rx="120" fill="url(#ceBg)" stroke="#3f5fb0" stroke-opacity="0.85" stroke-width="6"/>
+  <g transform="translate(146,146) scale(9.17)" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/>
+  </g>
 </svg>
