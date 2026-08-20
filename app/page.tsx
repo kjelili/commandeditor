@@ -324,14 +324,21 @@ export default function Home() {
     if (tool !== 'edit') setEditMode(false)
     else setEditMode(true)
     setProgress(null)
-    // Update URL for deep-linking
-    const url = new URL(window.location.href)
-    if (tool) url.searchParams.set('tool', tool)
-    else url.searchParams.delete('tool')
-    window.history.replaceState({}, '', url.toString())
+    // URL ?tool= sync is centralized in the useEffect on selectedTool below.
   }
   // Keep ref in sync
   handleToolSelectRef.current = handleToolSelect
+
+  // Keep the address bar's ?tool= in sync with the selected tool no matter which
+  // path changed it — grid, deep-link, quick bar, reset, or the logo. Fixes a
+  // stale ?tool=… (e.g. cloudconnect) lingering after switching tools or going home.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    if (selectedTool) url.searchParams.set('tool', selectedTool)
+    else url.searchParams.delete('tool')
+    window.history.replaceState({}, '', url.toString())
+  }, [selectedTool])
 
   const handleProcessingComplete = (result: Blob, toolName?: string) => {
     setProcessedFile(result); processedFileRef.current = result
@@ -557,7 +564,7 @@ export default function Home() {
            className="sticky top-0 z-40 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <a href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+            <a href="/" onClick={(e) => { e.preventDefault(); setSelectedTool(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
                className="flex items-center gap-3 group" aria-label="CommandEditor — back to top">
               <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105">
               <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-full h-full">
@@ -1276,7 +1283,7 @@ export default function Home() {
       {/* ===== FOOTER ===== */}
       <footer style={{ background: 'var(--navy)', borderTop: '1px solid rgba(255,255,255,0.08)' }} className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-6">
-          <a href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+          <a href="/" onClick={(e) => { e.preventDefault(); setSelectedTool(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
              className="flex items-center gap-3 group" aria-label="CommandEditor — back to top">
             <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105">
             <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-full h-full">
