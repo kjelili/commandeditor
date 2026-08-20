@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { escapeHtml } from '@/utils/sanitizeHtml'
 import { documentAI } from '../utils/aiRag';
 import type { ChatMessage, AIQueryResult } from '../types';
 
@@ -247,8 +248,10 @@ export const AIAssistant: React.FC<Props> = ({
                   whiteSpace: 'pre-wrap',
                 }}
               >
-                <div dangerouslySetInnerHTML={{ 
-                  __html: msg.content
+                <div dangerouslySetInnerHTML={{
+                  // Escape first so untrusted document text / model output can't
+                  // inject HTML (XSS), THEN apply the safe **bold** / newline markup.
+                  __html: escapeHtml(msg.content)
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                     .replace(/\n/g, '<br/>')
                 }} />

@@ -76,6 +76,8 @@ export default function PluginManagerTool({ onClose, showStatus }: Props) {
   const installFromUrl = async () => {
     const url = pluginUrl.trim()
     if (!url) return
+    if (!/^https:\/\//i.test(url)) { showStatus('Blocked: plugin URLs must use https'); return }
+    if (!window.confirm(`\u26a0 Security warning\n\nInstalling a plugin fetches and RUNS third-party code with full access to this page and any documents you open here.\n\nRun code from:\n${url}\n\nProceed only if you completely trust this source.`)) return
     try {
       const res = await fetch(url)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -112,14 +114,21 @@ export default function PluginManagerTool({ onClose, showStatus }: Props) {
         const entry = marketplace.find((m: any) => m.id === id)
         if (entry && !plugins.some((p: any) => p.id === id)) await sdkRef.current.register(entry.module)
       }
-      // URL plugins
-      for (const url of cfg.urls || []) {
-        const res = await fetch(url); const code = await res.text()
-        const mod = { exports: {} as any }
-        new Function('module', 'exports', code)(mod, mod.exports)
-        await sdkRef.current.register(mod.exports.default || mod.exports)
+      // URL plugins — https only, and require explicit consent, since a shared
+      // config must never silently fetch and run third-party code in the page.
+      const urlList = (cfg.urls || []).filter((u: string) => /^https:\/\//i.test(u))
+      if (urlList.length > 0) {
+        const consent = window.confirm(`\u26a0 Security warning\n\nThis config wants to fetch and RUN ${urlList.length} third-party plugin(s):\n\n${urlList.join('\n')}\n\nPlugins run with full access to this page and your open documents. Proceed only if you trust every URL above.`)
+        if (consent) {
+          for (const url of urlList) {
+            const res = await fetch(url); const code = await res.text()
+            const mod = { exports: {} as any }
+            new Function('module', 'exports', code)(mod, mod.exports)
+            await sdkRef.current.register(mod.exports.default || mod.exports)
+          }
+          localStorage.setItem('ce-plugin-urls', JSON.stringify(urlList))
+        }
       }
-      localStorage.setItem('ce-plugin-urls', JSON.stringify(cfg.urls || []))
       rerender(); showStatus('✓ Team plugin config applied')
     } catch (err: any) { showStatus('Import failed: ' + err.message) }
     e.target.value = ''

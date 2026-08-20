@@ -174,9 +174,14 @@ export async function convertHTMLFileToPDF(file: File): Promise<Blob> {
 async function _htmlToPDF(html: string, _name: string): Promise<Blob> {
   const { jsPDF } = await import('jspdf')
   const html2canvas = (await import('html2canvas')).default
+  // Sanitize the uploaded HTML before it touches the live DOM. Without this a
+  // malicious .html file could fire inline event handlers (onerror/onload) the
+  // instant the element is inserted — an XSS vector. DOMPurify strips scripts,
+  // event handlers and dangerous URLs while preserving layout for rendering.
+  const DOMPurify = (await import('dompurify')).default
   const el = document.createElement('div')
   el.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;padding:40px;box-sizing:border-box;font-family:Georgia,serif;font-size:13px;line-height:1.6'
-  el.innerHTML = html
+  el.innerHTML = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } })
   document.body.appendChild(el)
   try {
     const canvas = await html2canvas(el, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' })
