@@ -78,6 +78,12 @@ interface PDFToolsProps {
 // reachable from an empty state).
 const NO_FILE_TOOLS = ['hashcheck', 'aesencrypt', 'formbuilder', 'cloudconnect', 'printpdf', 'timelock', 'macro', 'recipe', 'watchfolder', 'netaudit', 'policy', 'scantopdf']
 
+// Flagship tools: the daily-driver basics we guarantee work every time. Every
+// other tool lives under a collapsible "Labs (beta)" section so heavier or
+// experimental features never undermine trust in the core set. Re-tier by
+// editing this single list.
+const FLAGSHIP_TOOLS = new Set(['merge','split','compress','convert','edit','inplaceedit','rearrange','rotate','watermark','pagenum','protect','redact','ocr','sign','formfill'])
+
 const TOOLS = [
   { id: 'merge',       name: 'Merge',       fullName: 'Merge PDFs',         emoji: '⊕',  desc: 'Combine PDFs',    requiresPDF: true,    color: '#2563eb', colorLight: '#dbeafe' },
   { id: 'split',       name: 'Split',       fullName: 'Split PDF',          emoji: '✂',  desc: 'Extract pages',   requiresPDF: true,    color: '#7c3aed', colorLight: '#ede9fe' },
@@ -264,6 +270,7 @@ export default function PDFTools({
   const [splitN, setSplitN] = useState(1)
   // Tool search
   const [toolSearch, setToolSearch] = useState('')
+  const [showLabs, setShowLabs] = useState(false)
   const [dragOverTool, setDragOverTool] = useState<string|null>(null)
   // Hash result
   const [hashResult, setHashResult] = useState<{name:string;hash:string;size:number}|null>(null)
@@ -2138,7 +2145,7 @@ export default function PDFTools({
           )}
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-2">
-          {TOOLS.filter(tool => !(IS_DESKTOP && tool.id === 'cloudconnect')).filter(tool => !policy.disabledTools.includes(tool.id)).filter(tool => !toolSearch || tool.name.toLowerCase().includes(toolSearch.toLowerCase()) || tool.desc.toLowerCase().includes(toolSearch.toLowerCase()) || tool.fullName.toLowerCase().includes(toolSearch.toLowerCase())).map((tool) => {
+          {TOOLS.filter(tool => !(IS_DESKTOP && tool.id === 'cloudconnect')).filter(tool => !policy.disabledTools.includes(tool.id)).filter(tool => !toolSearch || tool.name.toLowerCase().includes(toolSearch.toLowerCase()) || tool.desc.toLowerCase().includes(toolSearch.toLowerCase()) || tool.fullName.toLowerCase().includes(toolSearch.toLowerCase())).filter(tool => (!!toolSearch && !!toolSearch.trim()) || showLabs || FLAGSHIP_TOOLS.has(tool.id)).map((tool) => {
             const disabled = (files.length === 0 && !NO_FILE_TOOLS.includes(tool.id)) ||
               (tool.requiresPDF && !hasPDFs) ||
               (tool.requiresNonPDF && !hasConvertible)
@@ -2228,6 +2235,10 @@ export default function PDFTools({
                     <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-white"
                           style={{ background: 'var(--blue-vivid)', fontSize: 10 }} aria-hidden="true">✓</span>
                   )}
+                  {!FLAGSHIP_TOOLS.has(tool.id) && (
+                    <span className="absolute -top-1.5 -left-1.5 px-1 rounded-md text-white"
+                          style={{ background: '#7c3aed', fontSize: 8, lineHeight: '12px', letterSpacing: '.03em' }} aria-hidden="true">BETA</span>
+                  )}
                   <div className="w-9 h-9 mx-auto mb-1.5 rounded-xl flex items-center justify-center text-base transition-colors"
                        style={{ background: isActive ? tool.color : tool.colorLight, color: isActive ? 'white' : tool.color }}
                        aria-hidden="true">
@@ -2253,6 +2264,18 @@ export default function PDFTools({
             </div>
           )}
         </div>
+        {!(toolSearch && toolSearch.trim()) && (() => {
+          const labCount = TOOLS.filter(t => !FLAGSHIP_TOOLS.has(t.id) && !policy.disabledTools.includes(t.id) && !(IS_DESKTOP && t.id === 'cloudconnect')).length
+          return (
+            <button type="button" onClick={() => setShowLabs(v => !v)}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-colors"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--ink-soft)' }}
+              aria-expanded={showLabs}>
+              {showLabs ? 'Hide Labs tools' : `Show ${labCount} more tools — Labs (beta)`}
+              <span aria-hidden="true">{showLabs ? '▲' : '▼'}</span>
+            </button>
+          )
+        })()}
         {files.length === 0 && (
           <div className="mt-4 flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm"
                style={{ background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.15)', color: 'var(--blue-vivid)' }}>

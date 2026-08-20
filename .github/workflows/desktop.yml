@@ -24,6 +24,10 @@ jobs:
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # Exposed so the Windows signing step can detect whether Azure Trusted
+    # Signing is configured. Empty when unset -> the step skips, build stays green.
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
     steps:
       - uses: actions/checkout@v5
 
@@ -70,6 +74,15 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing + notarization. tauri-action signs during bundling
+          # (correct ordering, no post-build step needed). Inactive until the
+          # Apple secrets exist, in which case the .dmg is signed AND notarized.
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: desktop
           # Only publish a Release on tag pushes. On manual (workflow_dispatch)
@@ -80,6 +93,37 @@ jobs:
           releaseBody: 'Native desktop build of CommandEditor — the private, in-browser PDF toolkit, now as an offline app.'
           releaseDraft: true
           prerelease: false
+
+      # Windows code signing via Azure Trusted Signing (~$9.99/mo, cloud HSM,
+      # no hardware token). Signs the produced installers so SmartScreen stops
+      # warning (reputation still ramps with download volume). Runs only when the
+      # Azure service-principal secrets exist, so absent config leaves the build
+      # green with unsigned installers.
+      #
+      # Required repo secrets:  AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
+      # Required repo variables: AZURE_TS_ENDPOINT, AZURE_TS_ACCOUNT, AZURE_TS_PROFILE
+      #
+      # NOTE: this signs the workflow_dispatch artifacts correctly. For tag/release
+      # runs, tauri-action uploads the installers to the draft Release *before* this
+      # step, so those assets would be unsigned — ask me to split build/sign/release
+      # if you want signed Release assets.
+      - name: Sign Windows installers (Azure Trusted Signing)
+        if: matrix.os == 'windows-latest' && env.AZURE_CLIENT_ID != ''
+        uses: azure/trusted-signing-action@v0
+        with:
+          endpoint: ${{ vars.AZURE_TS_ENDPOINT }}
+          trusted-signing-account-name: ${{ vars.AZURE_TS_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_TS_PROFILE }}
+          files-folder: desktop/src-tauri/target/release/bundle
+          files-folder-filter: exe,msi
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: Upload bundles (manual runs)
         if: github.event_name == 'workflow_dispatch'
