@@ -2235,10 +2235,6 @@ export default function PDFTools({
                     <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-white"
                           style={{ background: 'var(--blue-vivid)', fontSize: 10 }} aria-hidden="true">✓</span>
                   )}
-                  {!FLAGSHIP_TOOLS.has(tool.id) && (
-                    <span className="absolute -top-1.5 -left-1.5 px-1 rounded-md text-white"
-                          style={{ background: '#7c3aed', fontSize: 8, lineHeight: '12px', letterSpacing: '.03em' }} aria-hidden="true">BETA</span>
-                  )}
                   <div className="w-9 h-9 mx-auto mb-1.5 rounded-xl flex items-center justify-center text-base transition-colors"
                        style={{ background: isActive ? tool.color : tool.colorLight, color: isActive ? 'white' : tool.color }}
                        aria-hidden="true">
