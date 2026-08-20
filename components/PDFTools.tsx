@@ -2267,7 +2267,7 @@ export default function PDFTools({
               className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-colors"
               style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--ink-soft)' }}
               aria-expanded={showLabs}>
-              {showLabs ? 'Hide Labs tools' : `Show ${labCount} more tools — Labs (beta)`}
+              {showLabs ? 'Hide Tools Lab' : `Show ${labCount} more tools — Tools Lab`}
               <span aria-hidden="true">{showLabs ? '▲' : '▼'}</span>
             </button>
           )
