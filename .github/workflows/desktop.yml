@@ -28,6 +28,7 @@ jobs:
     # Signing is configured. Empty when unset -> the step skips, build stays green.
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ES_USERNAME: ${{ secrets.ES_USERNAME }}
     steps:
       - uses: actions/checkout@v5
 
@@ -124,6 +125,51 @@ jobs:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+      # ── Alternative: Windows signing via SSL.com eSigner (cloud, CI-native) ──
+      # Runs only when the ES_* secrets exist AND Azure is NOT configured, so the
+      # two signers never double-sign. Add repo secrets:
+      #   ES_USERNAME, ES_PASSWORD, ES_CREDENTIAL_ID, ES_TOTP_SECRET
+      # (For a demo/sandbox cert set environment_name: TEST below; PROD = real cert.)
+      # Supply-chain note: @develop is a moving branch — pin to a release SHA once live.
+      - name: Detect Windows installers (eSigner)
+        id: winbundle
+        if: matrix.os == 'windows-latest' && env.ES_USERNAME != '' && env.AZURE_CLIENT_ID == ''
+        shell: pwsh
+        run: |
+          $root = 'desktop/src-tauri/target/release/bundle'
+          $nsis = (Test-Path (Join-Path $root 'nsis')).ToString().ToLower()
+          $msi  = (Test-Path (Join-Path $root 'msi')).ToString().ToLower()
+          "has_nsis=$nsis" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "has_msi=$msi"   | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Sign NSIS installer (SSL.com eSigner)
+        if: matrix.os == 'windows-latest' && env.ES_USERNAME != '' && env.AZURE_CLIENT_ID == '' && steps.winbundle.outputs.has_nsis == 'true'
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: batch_sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: desktop/src-tauri/target/release/bundle/nsis
+          override: true
+          malware_block: false
+          environment_name: PROD
+
+      - name: Sign MSI installer (SSL.com eSigner)
+        if: matrix.os == 'windows-latest' && env.ES_USERNAME != '' && env.AZURE_CLIENT_ID == '' && steps.winbundle.outputs.has_msi == 'true'
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: batch_sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: desktop/src-tauri/target/release/bundle/msi
+          override: true
+          malware_block: false
+          environment_name: PROD
 
       - name: Upload bundles (manual runs)
         if: github.event_name == 'workflow_dispatch'
