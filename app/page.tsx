@@ -493,6 +493,18 @@ export default function Home() {
       } else showStatus('No processed file to download yet')
       return
     }
+    if (command.action === 'print') {
+      // Opens the browser print dialog for the current document view.
+      // The OS print UI always requires a final user gesture — this is intentional
+      // and keeps the pure-web privacy model intact.
+      try {
+        window.print()
+        showStatus('Print dialog opened')
+      } catch {
+        showStatus('Could not open print dialog')
+      }
+      return
+    }
     if (command.action === 'install') {
       if (pwaPrompt) {
         pwaPrompt.prompt()

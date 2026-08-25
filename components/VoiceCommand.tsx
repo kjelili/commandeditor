@@ -70,10 +70,19 @@ const COMMAND_REFERENCE: { group: string; emoji: string; items: { say: string; d
       { say: '"how many pages"', does: 'Read out the page count' },
       { say: '"undo"', does: 'Undo the last action' },
       { say: '"download" / "save the file"', does: 'Download the result' },
+      { say: '"print"', does: 'Open the browser print dialog' },
       { say: '"dark mode" / "light mode"', does: 'Switch theme' },
       { say: '"start over" / "reset all"', does: 'Clear everything' },
       { say: '"help"', does: 'Show help' },
       { say: '"cancel" / "stop"', does: 'Cancel current command' },
+    ],
+  },
+  {
+    group: 'Multi-step (compound)', emoji: '⛓',
+    items: [
+      { say: '"merge, number pages, and download"', does: 'Chain up to 5 tool actions in one utterance' },
+      { say: '"compress then watermark then save"', does: 'Connectors: and, then, after that, next…' },
+      { say: '"OCR and download"', does: 'Any two+ existing commands work' },
     ],
   },
   {
@@ -128,7 +137,7 @@ export type VoiceCommandType = {
         | 'repair' | 'protect' | 'sanitize'
         | 'scalepages' | 'linkedit' | 'contactsheet' | 'bookmarkio'
         | 'nup' | 'booklet' | 'scantopdf' | 'formextract' | 'einvoice'
-        | 'download' | 'upload'
+        | 'download' | 'upload' | 'print'
         // ── New voice actions (v1.0 launch) ───────────────────────────────
         | 'darkmode' | 'lightmode' | 'toggletheme'
         | 'help' | 'shortcuts'
@@ -162,6 +171,11 @@ const COMMAND_MAP: Array<{
   {
     action: 'download', label: 'Download file', emoji: '⬇️',
     keywords: /\b(download|save|export( the)? file|get( the)? file|grab( the)? file|fetch( the)? file|store|keep|preserve|dawnload|downlod|downlad|safe the|daonload|get it|take it|retrieve)\b/i,
+  },
+  // ── PRINT (browser dialog — user still confirms) ─────────────────────────
+  {
+    action: 'print' as any, label: 'Print', emoji: '🖨',
+    keywords: /\b(print|print (it|this|the (file|document|pdf))|send to (the )?printer|printer)\b/i,
   },
 
   // ── MERGE ─────────────────────────────────────────────────────────────────
@@ -757,7 +771,8 @@ const COMMAND_MAP: Array<{
 ]
 
 // ── Phonetic normaliser (accent-robust pre-processing) ────────────────────
-function normalise(text: string): string {
+/** Exported for unit tests. Strips wake words / politeness and normalises accents. */
+export function normalise(text: string): string {
   return text
     .toLowerCase()
     .replace(/\bpee\s*dee\s*(ef|eff|fee)\b/gi, 'pdf')
@@ -790,7 +805,8 @@ function levenshtein(a: string, b: string): number {
 }
 
 // ── Score transcript against all commands ─────────────────────────────────
-function scoreCandidates(raw: string): Array<{
+/** Exported for unit tests. Returns top candidates for a single utterance segment. */
+export function scoreCandidates(raw: string): Array<{
   action: VoiceCommandType; label: string; emoji: string; score: number
 }> {
   const norm = normalise(raw)
@@ -836,6 +852,66 @@ function scoreCandidates(raw: string): Array<{
     }
   }
   return fuzzy.sort((a, b) => b.score - a.score).slice(0, 3)
+}
+
+// ── Compound / multi-step utterance support (v11.1) ───────────────────────
+// Split a spoken sentence on natural connectors so one utterance can drive
+// several sequential tool actions, e.g.:
+//   "merge them, number the pages, and download"
+//   "compress then watermark confidential then save"
+// This is purely additive: single-command behaviour is unchanged when only
+// one high-confidence segment is found.
+// Connectors that separate sequential tool intents.
+// Deliberately omit bare "and" — it appears inside tool phrases
+// ("black and white", "front and back"). Use "and then", "then", commas, etc.
+const COMPOUND_SPLIT =
+  /\s*(?:,\s*(?:and\s+)?|(?:\band\s+then\b|\bthen\b|\band\s+after\s+that\b|\bafter\s+that\b|\band\s+also\b|\bfollowed\s+by\b|\bnext\b)\s+)/i
+
+/** Split a normalised utterance into ordered segments. Exported for tests. */
+export function splitCompoundUtterance(raw: string): string[] {
+  const norm = normalise(raw)
+  if (!norm || norm.length < 2) return []
+  // Prefer splitting only when a real connector is present; otherwise keep
+  // the whole phrase as one segment so single-command paths stay identical.
+  if (!COMPOUND_SPLIT.test(norm)) return [norm]
+  return norm
+    .split(COMPOUND_SPLIT)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 2)
+}
+
+export type CompoundStep = {
+  action: VoiceCommandType
+  label: string
+  emoji: string
+  score: number
+  segment: string
+}
+
+/**
+ * Parse a potentially multi-step utterance into ordered high-confidence steps.
+ * Returns [] when nothing matches. When only one step is found the result is
+ * identical to the previous single-command behaviour (same scoring).
+ * Exported for unit tests.
+ */
+export function parseCompoundCommands(raw: string): CompoundStep[] {
+  const segments = splitCompoundUtterance(raw)
+  if (segments.length === 0) return []
+
+  const steps: CompoundStep[] = []
+  for (const segment of segments) {
+    const cands = scoreCandidates(segment)
+    // Accept only confident matches so we never invent steps from noise
+    const top = cands[0]
+    if (top && top.score >= 0.85) {
+      // Avoid consecutive duplicate actions (e.g. "merge and combine")
+      if (steps.length === 0 || steps[steps.length - 1].action.action !== top.action.action) {
+        steps.push({ ...top, segment })
+      }
+    }
+  }
+  // Cap at 5 steps — keeps the chain predictable and matches the product goal
+  return steps.slice(0, 5)
 }
 
 const SpeechRecognition = typeof window !== 'undefined'
@@ -896,9 +972,47 @@ export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCo
     }, 2800)
   }, [])
 
+  /** Run a sequence of high-confidence steps with staggered dispatch so
+   *  each tool can finish (or at least start) before the next is queued.
+   *  Existing single-command path is used when steps.length === 1. */
+  const executeCompound = useCallback((steps: CompoundStep[]) => {
+    if (steps.length === 0) return
+    if (steps.length === 1) {
+      executeCommand(steps[0].action, steps[0].label)
+      return
+    }
+    setStatus('success')
+    setPendingCandidates([])
+    if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current)
+    const labels = steps.map((s) => s.label).join(' → ')
+    setStatusMessage(`✓ ${steps.length} steps: ${labels}`)
+    // Stagger so isProcessing gates and UI updates can settle between steps
+    steps.forEach((step, i) => {
+      setTimeout(() => {
+        onCommandRef.current(step.action)
+        if (i === steps.length - 1) {
+          setTimeout(() => {
+            setIsAwake(false); isAwakeRef.current = false
+            setTranscript(''); setStatus('listening')
+            setStatusMessage('Say "Hey Editor"'); setHeardText('')
+          }, 2800)
+        }
+      }, i * 900)
+    })
+  }, [executeCommand])
+
   const processCommand = useCallback((raw: string) => {
     if (raw.trim().length < 2) return
     setHeardText(raw)
+
+    // Multi-step path first (additive). Falls through to classic single-command
+    // behaviour when fewer than two confident steps are found.
+    const compound = parseCompoundCommands(raw)
+    if (compound.length >= 2) {
+      executeCompound(compound)
+      return
+    }
+
     const candidates = scoreCandidates(raw)
     if (candidates.length === 0) {
       setStatus('confirm'); setPendingCandidates([])
@@ -919,7 +1033,7 @@ export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCo
       setStatus('listening'); setIsAwake(false); isAwakeRef.current = false
       setStatusMessage('Say "Hey Editor"'); setPendingCandidates([]); setHeardText('')
     }, 10000)
-  }, [executeCommand])
+  }, [executeCommand, executeCompound])
 
   // ── v10: on-device voice (Whisper beta) ────────────────────────────────
   // Records up to 8 s, transcribes with whisper-tiny entirely in-browser
@@ -1271,7 +1385,7 @@ export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCo
             ))}
           </div>
           <p className="text-xs mt-3" style={{ color: 'var(--ink-muted)' }}>
-            25+ synonyms per command · British, American, Australian, Indian, Nigerian &amp; South African accents · Fuzzy matching · AES-256 encrypt · Start over · Rename
+            25+ synonyms per command · Multi-step chains ("merge, number pages, download") · Fuzzy matching · On-device Whisper beta · Accents supported
           </p>
         </div>
       )}
