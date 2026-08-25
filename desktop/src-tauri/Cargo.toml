@@ -11,8 +11,6 @@ rust-version = "1.70"
 [build-dependencies]
 tauri-build = { version = "1.5", features = [] }
 
-# Feature flags must mirror tauri.conf.json > tauri > allowlist exactly —
-# tauri-codegen fails the build on any mismatch. Keep them in sync.
 [dependencies]
 tauri = { version = "1.5", features = [
   "shell-open",
@@ -32,6 +30,10 @@ tauri = { version = "1.5", features = [
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 uuid = { version = "1.6", features = ["v4"] }
+
+dirs = "5.0"
+fuzzy-matcher = "0.3"
+urlencoding = "2.1"
 
 [features]
 default = ["custom-protocol"]

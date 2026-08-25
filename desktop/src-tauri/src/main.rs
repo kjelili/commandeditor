@@ -1,15 +1,6 @@
-// CommandEditor Desktop — Rust backend (minimal, CI-stable)
-//
-// Philosophy: the web app already implements every PDF operation in
-// TypeScript/WASM. The desktop shell adds native chrome only: system tray,
-// close-to-tray, global shortcuts, native notifications, multi-window.
-//
-// The original scaffold shipped 12 Rust commands built on lopdf/pdfium/notify
-// — never compiled, duplicated web functionality, and would fail CI. They are
-// archived in main_extras.rs.txt for future native-only features. Keep this
-// file std+tauri-only so the release workflow stays green on all three OSes.
-
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod commands;
 
 use std::collections::HashMap;
 use std::sync::{mpsc::Receiver, Mutex, OnceLock};
@@ -19,7 +10,9 @@ use tauri::{
 };
 use uuid::Uuid;
 
-// ─── Commands (native conveniences the webview can invoke) ──────────────────
+use commands::file_resolver::{list_folder, read_file_bytes, resolve_file, write_temp_file};
+use commands::print::print_file;
+use commands::email::compose_email;
 
 #[tauri::command]
 async fn get_system_info() -> Result<HashMap<String, String>, String> {
@@ -39,19 +32,6 @@ async fn show_notification(title: String, body: String) -> Result<(), String> {
         .show()
         .map_err(|e| e.to_string())
 }
-
-// ─── OAuth loopback (desktop cloud sign-in) ─────────────────────────────────
-//
-// Google blocks OAuth inside embedded webviews, and providers won't whitelist
-// Tauri's tauri.localhost origin. So on desktop the webview opens the SYSTEM
-// browser; the provider redirects to the production site's callback page
-// (already registered), which relays the token to this loopback listener.
-// Token path: provider → commandeditor.com (static page; the URL fragment
-// never reaches any server) → 127.0.0.1 (never leaves the machine).
-//
-// Flow: webview invokes start_oauth_listener → gets an ephemeral port → opens
-// the browser → invokes await_oauth_callback(port), which resolves with the
-// redirect's path+query (or a 5-minute timeout error).
 
 static OAUTH_WAITERS: OnceLock<Mutex<HashMap<u16, Receiver<String>>>> = OnceLock::new();
 
@@ -74,8 +54,6 @@ fn start_oauth_listener() -> Result<u16, String> {
                 let first = req.lines().next().unwrap_or("");
                 let method = first.split_whitespace().next().unwrap_or("");
                 let path = first.split_whitespace().nth(1).unwrap_or("/").to_string();
-                // CORS headers included so the relay page may also use fetch()
-                // (top-level navigation is the primary path, fetch a fallback).
                 let (status, body) = if method == "OPTIONS" {
                     ("204 No Content", String::new())
                 } else {
@@ -107,8 +85,6 @@ async fn await_oauth_callback(port: u16) -> Result<String, String> {
     .await
     .map_err(|e| e.to_string())?
 }
-
-// ─── Main ────────────────────────────────────────────────────────────────────
 
 fn main() {
     let tray_menu = SystemTrayMenu::new()
@@ -153,7 +129,6 @@ fn main() {
         })
         .on_window_event(|event| {
             if let WindowEvent::CloseRequested { api, .. } = event.event() {
-                // Close to tray instead of quitting
                 let _ = event.window().hide();
                 api.prevent_close();
             }
@@ -163,10 +138,15 @@ fn main() {
             show_notification,
             start_oauth_listener,
             await_oauth_callback,
+            resolve_file,
+            read_file_bytes,
+            write_temp_file,
+            list_folder,
+            print_file,
+            compose_email,
         ])
         .setup(|app| {
             let mut shortcuts = app.global_shortcut_manager();
-            // Reserved: focus/open shortcuts wired to the webview later
             let _ = shortcuts.register("CmdOrCtrl+Shift+O", || {});
             let _ = shortcuts.register("CmdOrCtrl+Shift+S", || {});
             Ok(())

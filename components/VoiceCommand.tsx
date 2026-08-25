@@ -114,6 +114,7 @@ interface VoiceCommandProps {
   files: File[]
   onCommand: (command: VoiceCommandType) => void
   isProcessing: boolean
+  onDesktopPipeline?: (pipeline: any) => Promise<void>
 }
 
 export type VoiceCommandType = {
@@ -924,7 +925,7 @@ const LANG_LABELS: Record<string, string> = {
   'en-IN': '🇮🇳 Indian', 'en-NG': '🇳🇬 Nigerian', 'en-ZA': '🇿🇦 S. African', 'en-CA': '🇨🇦 Canadian',
 }
 
-export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCommandProps) {
+export default function VoiceCommand({ files, onCommand, isProcessing, onDesktopPipeline }: VoiceCommandProps) {
   const [isListening, setIsListening] = useState(false)
   const [isAwake, setIsAwake] = useState(false)
   const [transcript, setTranscript] = useState('')
@@ -947,12 +948,14 @@ export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCo
   const statusRef = useRef<typeof status>('idle')
   const onCommandRef = useRef(onCommand)
   const pendingRef = useRef(pendingCandidates)
+  const onDesktopPipelineRef = useRef(onDesktopPipeline)
 
   useEffect(() => { isAwakeRef.current = isAwake }, [isAwake])
   useEffect(() => { isListeningRef.current = isListening }, [isListening])
   useEffect(() => { statusRef.current = status }, [status])
   useEffect(() => { onCommandRef.current = onCommand }, [onCommand])
   useEffect(() => { pendingRef.current = pendingCandidates }, [pendingCandidates])
+  useEffect(() => { onDesktopPipelineRef.current = onDesktopPipeline }, [onDesktopPipeline])
   useEffect(() => { setIsSupported(!!SpeechRecognition) }, [])
 
   const checkWakeWord = useCallback((text: string): boolean => {
@@ -1001,12 +1004,26 @@ export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCo
     })
   }, [executeCommand])
 
-  const processCommand = useCallback((raw: string) => {
+  const processCommand = useCallback(async (raw: string) => {
     if (raw.trim().length < 2) return
     setHeardText(raw)
 
-    // Multi-step path first (additive). Falls through to classic single-command
-    // behaviour when fewer than two confident steps are found.
+    // ── Desktop pipeline path (Tauri only) ───────────────────────────────
+    if (isTauri() && onDesktopPipelineRef.current) {
+      const { parseDesktopPipeline } = await import('@/utils/desktopPipeline')
+      const pipeline = parseDesktopPipeline(raw)
+      if (pipeline && (pipeline.resolveSteps.length > 0 || pipeline.finalize)) {
+        setStatus('success')
+        setStatusMessage('🖥️ Desktop pipeline…')
+        onDesktopPipelineRef.current(pipeline).catch((e: any) => {
+          setStatus('error')
+          setStatusMessage('Pipeline failed: ' + (e?.message || String(e)))
+        })
+        return
+      }
+    }
+
+    // ── Existing multi-step path (unchanged below) ───────────────────────
     const compound = parseCompoundCommands(raw)
     if (compound.length >= 2) {
       executeCompound(compound)
@@ -1391,4 +1408,8 @@ export default function VoiceCommand({ files, onCommand, isProcessing }: VoiceCo
       )}
     </div>
   )
+}
+
+function isTauri(): boolean {
+  return typeof window !== 'undefined' && !!(window as any).__TAURI__
 }

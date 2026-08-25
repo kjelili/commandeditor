@@ -37,6 +37,10 @@ const PWAInstaller = dynamic(() => import('@/components/PWAInstaller'), { ssr: f
 const MobileQuickBar = dynamic(() => import('@/components/MobileQuickBar'), { ssr: false })
 const VersionTravelTool = dynamic(() => import('@/components/VersionTravelTool'), { ssr: false })
 
+// ── Desktop voice pipeline ─────────────────────────────────────────────────
+import { executeDesktopPipeline } from '@/utils/desktopPipeline'
+import { isTauri } from '@/utils/tauriBridge'
+
 // Maps each tool to a descriptive filename suffix, so a compressed file
 // downloads as "report-compressed.pdf" rather than a vague "report-edited.pdf".
 // Tools not listed fall back to "edited".
@@ -129,6 +133,8 @@ export default function Home() {
   const [provenanceLog, setProvenanceLog] = useState<Array<{op:string;ts:string;inKB:number;outKB?:number}>>([])
   const [memoryCleared, setMemoryCleared] = useState(false)
   const [pwStrength, setPwStrength] = useState(0) // 0-4
+  // ── Desktop pipeline output tracker ──────────────────────────────────────
+  const [lastOutput, setLastOutput] = useState<File | null>(null)
   // ── v7 Enhancement pack state ───────────────────────────────────────────
   const [enhBytes, setEnhBytes] = useState<Uint8Array | null>(null)
   const [diffBytes, setDiffBytes] = useState<{ a: Uint8Array; b: Uint8Array } | null>(null)
@@ -378,6 +384,11 @@ export default function Home() {
           })
         }
       } catch { /* snapshots must never break the main flow */ }
+      // Desktop pipeline: track output for print / email
+      const completedOp = toolName || selectedTool
+      const outSuffix = completedOp ? (TOOL_SUFFIX[completedOp] || 'edited') : 'edited'
+      const outBase = uploadedFiles[0]?.name.replace(/\.[^.]+$/, '') || 'output'
+      setLastOutput(new File([result], `${outBase}-${outSuffix}.pdf`, { type: 'application/pdf' }))
     }
   }
 
@@ -526,7 +537,10 @@ export default function Home() {
     if (command.action === 'ocr') { handleToolSelect('ocr'); return }
     if (command.action === 'startover') {
       handleFilesUpload([]); setSelectedTool(null); setProcessedFile(null); processedFileRef.current = null
-      showStatus('✓ Cleared — ready for a new document'); return
+      setLastCompletedTool(null)
+      setProvenanceLog([])
+      document.getElementById('app-section')?.scrollIntoView({ behavior: 'smooth' })
+      return
     }
     if (command.action === 'rename') {
       setEditingFileName(true)
@@ -550,6 +564,18 @@ export default function Home() {
     const toolTrigger = (window as any).__triggerToolAction
     if (toolTrigger) toolTrigger(command.action, command.format)
   }, [uploadedFiles, showStatus, pwaPrompt])
+
+  // ── Desktop voice pipeline handler ───────────────────────────────────────
+  const handleDesktopPipeline = useCallback(async (pipeline: any) => {
+    await executeDesktopPipeline(pipeline, {
+      onLoadFiles: (newFiles) => setUploadedFiles((prev) => [...prev, ...newFiles]),
+      onCommand: handleVoiceCommand,
+      onStatus: (msg) => {
+        showStatus(msg, 60000)
+      },
+      getCurrentOutput: () => lastOutput,
+    })
+  }, [handleVoiceCommand, lastOutput, showStatus])
 
   const scrollToApp = () => document.getElementById('app-section')?.scrollIntoView({ behavior: 'smooth' })
 
@@ -769,7 +795,12 @@ export default function Home() {
             <FileUpload onFilesUpload={handleFilesUpload} uploadedFiles={uploadedFiles} />
           </div>
           <div className="lg:col-span-2" id="voice-btn">
-            <VoiceCommand files={uploadedFiles} onCommand={handleVoiceCommand} isProcessing={processing} />
+            <VoiceCommand
+              files={uploadedFiles}
+              onCommand={handleVoiceCommand}
+              isProcessing={processing}
+              onDesktopPipeline={isTauri() ? handleDesktopPipeline : undefined}
+            />
           </div>
         </div>
 

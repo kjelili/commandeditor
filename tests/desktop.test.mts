@@ -1,4 +1,3 @@
-// tests/desktop.test.mts — Tauri desktop release-readiness checks
 import assert from 'node:assert'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -27,20 +26,16 @@ await ok('every referenced bundle asset exists', () => {
     assert.ok(existsSync(join(tauriDir, icon)), `missing icon ${icon}`)
   }
   assert.ok(existsSync(join(tauriDir, conf.tauri.systemTray.iconPath)), 'tray icon missing')
-  assert.ok(readdirSync(join(tauriDir, 'resources')).length > 0, 'resources/ must not be empty (globbed by bundle)')
+  assert.ok(readdirSync(join(tauriDir, 'resources')).length > 0, 'resources/ must not be empty')
   assert.ok(existsSync(join(tauriDir, conf.tauri.bundle.macOS.entitlements)), 'entitlements.plist missing')
 })
 await ok('distDir matches the Next static export produced by CI', () => {
   assert.equal(conf.build.distDir, '../../out')
-  // CI pre-builds the web app; tauri must not try to run npm itself
   assert.equal(conf.build.beforeBuildCommand, '')
   const next = readFileSync(join(root, 'next.config.js'), 'utf8')
   assert.ok(next.includes('TAURI_BUILD'), 'next.config.js must gate output:export on TAURI_BUILD')
 })
 await ok('updater config removed until a real endpoint exists', () => {
-  // Tauri 1.x schema: updater belongs at tauri.updater, never under bundle —
-  // and with active:false it is dead weight. Reintroduce at the correct path
-  // only when a real update endpoint ships.
   assert.ok(!('updater' in conf.tauri.bundle), 'updater must not live under tauri.bundle')
   assert.ok(!('updater' in conf.tauri) || (conf.tauri.updater as any).active === false)
 })
@@ -55,7 +50,6 @@ await ok('release workflow exists with full OS matrix', () => {
   assert.ok(wf.includes('TAURI_BUILD'))
   assert.ok(wf.includes("tags:"), 'must build releases from tags')
   execFileSync(process.execPath, ['-e', `
-    // minimal YAML sanity: no tabs, balanced top-level keys
     const s = ${JSON.stringify(readFileSync(join(root, 'desktop', 'desktop.yml'), 'utf8'))};
     if (/\\t/.test(s)) throw new Error('tabs in YAML');
     for (const k of ['name:', 'on:', 'jobs:']) if (!s.includes(k)) throw new Error('missing ' + k);
@@ -65,10 +59,7 @@ await ok('desktop package.json provides the tauri CLI', () => {
   const pkg = JSON.parse(readFileSync(join(root, 'desktop', 'package.json'), 'utf8'))
   assert.ok(pkg.devDependencies['@tauri-apps/cli'])
 })
-
-
-await ok('Cargo features mirror the allowlist (tauri-codegen invariant)', () => {
-  // tauri 1.x fails the build when an allowlist module lacks its Cargo feature.
+await ok('Cargo features mirror the allowlist', () => {
   const conf2 = JSON.parse(readFileSync(join(tauriDir, 'tauri.conf.json'), 'utf8'))
   const al = conf2.tauri.allowlist
   const feats = [...cargo.matchAll(/"([a-z0-9-]+)"/g)].map(m => m[1])
@@ -90,11 +81,21 @@ await ok('Cargo features mirror the allowlist (tauri-codegen invariant)', () => 
     assert.equal(feats.includes(feat), enabled, `feature ${feat} mismatch with allowlist`)
   }
   assert.ok(feats.includes('system-tray'), 'system-tray feature required by config')
-  // heavy native deps stay out of the stable build (archived in main_extras.rs.txt)
   for (const heavy of ['lopdf', 'pdfium-render', 'notify', 'reqwest']) {
     assert.ok(!cargo.includes(heavy), `${heavy} should not be a build dependency`)
   }
   assert.ok(existsSync(join(tauriDir, 'src', 'main_extras.rs.txt')), 'archived extras missing')
+})
+await ok('desktop voice pipeline deps are lightweight', () => {
+  for (const dep of ['dirs', 'fuzzy-matcher', 'urlencoding']) {
+    assert.ok(cargo.includes(dep), `${dep} must be listed in Cargo.toml for desktop voice pipeline`)
+  }
+})
+await ok('Rust command modules exist and compile', () => {
+  assert.ok(existsSync(join(tauriDir, 'src', 'commands', 'mod.rs')), 'commands/mod.rs missing')
+  assert.ok(existsSync(join(tauriDir, 'src', 'commands', 'file_resolver.rs')), 'commands/file_resolver.rs missing')
+  assert.ok(existsSync(join(tauriDir, 'src', 'commands', 'print.rs')), 'commands/print.rs missing')
+  assert.ok(existsSync(join(tauriDir, 'src', 'commands', 'email.rs')), 'commands/email.rs missing')
 })
 
 console.log(`\n${passed} passed, ${process.exitCode ? 'FAILURES' : '0 failures'}`)
