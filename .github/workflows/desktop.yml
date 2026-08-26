@@ -81,9 +81,14 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Notarization is OPT-IN: the app is always signed, but it is only
+          # notarized when repo variable ENABLE_NOTARIZE == 'true'. This keeps a
+          # missing/slow/mismatched notary credential from ever hanging or
+          # blocking the macOS build. Set the variable once your APPLE_ID +
+          # app-specific password + APPLE_TEAM_ID all belong to the same account.
+          APPLE_ID: ${{ vars.ENABLE_NOTARIZE == 'true' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ vars.ENABLE_NOTARIZE == 'true' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ vars.ENABLE_NOTARIZE == 'true' && secrets.APPLE_TEAM_ID || '' }}
         with:
           projectPath: desktop
           # Only publish a Release on tag pushes. On manual (workflow_dispatch)
