@@ -1,0 +1,63 @@
+# CommandEditor Mobile (Android) build
+#
+# Wraps the static web export in a Capacitor Android project and builds a debug
+# APK. Runs on manual dispatch or a `mobile-v*` tag. iOS is built locally in
+# Xcode (needs macOS) — see mobile/README.md.
+name: mobile-android
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'mobile-v*'
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verify pnpm is on PATH
+        run: pnpm --version
+
+      - name: Install web dependencies
+        run: pnpm install --ignore-scripts
+
+      - name: Build web app (static export for mobile)
+        run: pnpm build
+        env:
+          MOBILE_BUILD: '1'
+
+      - name: Install Capacitor deps
+        run: cd mobile && npm install
+
+      - name: Add Android platform (if missing) + sync web assets
+        run: |
+          cd mobile
+          if [ ! -d android ]; then npx --no-install cap add android; fi
+          npx --no-install cap sync android
+
+      - name: Build debug APK
+        run: cd mobile/android && chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: commandeditor-android-debug
+          path: mobile/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

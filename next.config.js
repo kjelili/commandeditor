@@ -18,7 +18,9 @@ const nextConfig = {
 
   // Static export only for the Tauri desktop bundle (TAURI_BUILD=1 pnpm build
   // → out/, consumed by desktop/src-tauri). Web/Vercel builds are unaffected.
-  ...(process.env.TAURI_BUILD ? { output: 'export' } : {}),
+  // Static export for the native shells (Tauri desktop, Capacitor mobile).
+  // Web/Vercel builds (no flag) keep the normal Next output and are unaffected.
+  ...((process.env.TAURI_BUILD || process.env.MOBILE_BUILD) ? { output: 'export' } : {}),
 
   // Disable Next.js image optimization — we don't use next/image
   images: {
