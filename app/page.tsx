@@ -1341,6 +1341,7 @@ export default function Home() {
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
             <a href="/privacy" className="transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.55)' }}>Privacy</a>
             <a href="/terms" className="transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.55)' }}>Terms of Service</a>
+            <a href="/security" className="transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.55)' }}>Security</a>
             <span>·</span>
             <span>Zero uploads — all processing in your browser</span>
             <span>·</span>

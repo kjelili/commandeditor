@@ -1,0 +1,63 @@
+CommandEditor — Security & Compliance
+Last updated: 26 August 2026
+
+Short version: your files are processed entirely inside your browser and are
+never uploaded, so most of the usual risk surface simply does not exist.
+
+1. ARCHITECTURE — EVERYTHING RUNS ON YOUR DEVICE
+CommandEditor is a client-side application. Merging, editing, converting, OCR,
+signing, redaction, encryption and every other operation execute in your browser
+using JavaScript and WebAssembly. The website is served as static files from a
+CDN; there is no server that receives, processes, or stores your documents. The
+optional desktop app (Windows, macOS, Linux) runs the same engine fully offline.
+
+2. DATA HANDLING — NO UPLOADS, VERIFIABLE
+Documents are never transmitted to CommandEditor. The built-in "Proof of No
+Upload" tool monitors outgoing network activity so you can confirm file bytes
+never leave the device. Small preferences (dark mode, recent file names) live
+only in your browser's local storage and can be cleared at any time.
+
+3. CRYPTOGRAPHY
+Standard primitives via the browser Web Crypto API: AES-256-GCM (encryption),
+PBKDF2 (password-based key derivation), ECDSA P-256 (e-signatures), SHA-256
+(integrity). Notarization uses the open OpenTimestamps standard, anchoring only
+a SHA-256 hash — never the document.
+
+4. APPLICATION & TRANSPORT SECURITY
+HTTPS only with HSTS (preloaded); strict Content-Security-Policy; X-Frame-Options
+DENY and frame-ancestors 'none'; X-Content-Type-Options nosniff; restrictive
+Permissions-Policy; object-src 'none'. Untrusted HTML (converted files, AI output)
+is sanitized before rendering. No third-party trackers or advertising.
+
+5. DATA PROTECTION & GDPR
+No personal data collected on any server, no user accounts, no server-side logging
+of your files. Local processing supports data-minimization by design. Standard
+host request metadata (e.g. IP) may be logged for reliability/security and is never
+linked to document content, which never reaches the server.
+
+6. HEALTHCARE (HIPAA) POSTURE
+PHI placed into CommandEditor is processed on your device and never received by
+CommandEditor. A Business Associate Agreement is not applicable, because
+CommandEditor is a client-side utility rather than a business associate handling
+your data. CommandEditor is not itself a certified or covered entity; whether a
+workflow is HIPAA-compliant depends on your environment and controls.
+
+7. ENTERPRISE CONTROLS (NO CLOUD ACCOUNT REQUIRED)
+On-device controls that need no backend: policy presets, chain-of-custody log,
+per-recipient document fingerprinting for leak attribution, tamper-evident seals,
+and a downloadable cryptographic audit trail for signatures.
+
+8. WHAT COMMANDEDITOR DELIBERATELY DOES NOT DO
+No activity telemetry/analytics, no advertising, no account requirement, no
+server-side copies of your files, no transmission of document content to any third
+party (including for AI, which runs locally).
+
+9. VULNERABILITY DISCLOSURE
+Responsible disclosure welcome: hello@commandeditor.com with steps to reproduce.
+Please avoid publicly disclosing an unpatched issue.
+
+10. CONTACT
+Security and compliance questions: hello@commandeditor.com
+
+This document describes the product's design and controls for transparency and
+does not constitute legal or compliance advice or a warranty.
