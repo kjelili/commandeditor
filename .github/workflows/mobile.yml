@@ -52,6 +52,9 @@ jobs:
           if [ ! -d android ]; then npx --no-install cap add android; fi
           npx --no-install cap sync android
 
+      - name: Generate branded app icons + splash (from the command mark)
+        run: cd mobile && npx --no-install @capacitor/assets generate --android
+
       - name: Build debug APK
         run: cd mobile/android && chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon
 
