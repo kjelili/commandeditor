@@ -55,7 +55,7 @@ function applyFilter(ctx: CanvasRenderingContext2D, w: number, h: number, filter
 
   const S = Math.max(16, Math.floor(w / 8)) // local window size
   const half = Math.floor(S / 2)
-  const T = 15 // % below local mean counts as ink
+  const T = 10 // % below local mean counts as ink (lower = catches fainter print)
 
   for (let y = 0; y < h; y++) {
     const y1 = Math.max(0, y - half)
@@ -122,7 +122,7 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(video, 0, 0)
     applyFilter(ctx, canvas.width, canvas.height, filter)
-    setPages(prev => [...prev, { dataUrl: canvas.toDataURL('image/jpeg', 0.9), w: canvas.width, h: canvas.height }])
+    setPages(prev => [...prev, { dataUrl: (filter === 'color' ? canvas.toDataURL('image/jpeg', 0.92) : canvas.toDataURL('image/png')), w: canvas.width, h: canvas.height }])
     showStatus(`📸 Page ${pages.length + 1} captured`)
   }
 
@@ -136,7 +136,7 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
       const ctx = canvas.getContext('2d')!
       ctx.drawImage(bmp, 0, 0)
       applyFilter(ctx, canvas.width, canvas.height, filter)
-      setPages(prev => [...prev, { dataUrl: canvas.toDataURL('image/jpeg', 0.9), w: canvas.width, h: canvas.height }])
+      setPages(prev => [...prev, { dataUrl: (filter === 'color' ? canvas.toDataURL('image/jpeg', 0.92) : canvas.toDataURL('image/png')), w: canvas.width, h: canvas.height }])
     }
   }
 
@@ -147,13 +147,17 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
       const { PDFDocument } = await import('pdf-lib')
       const doc = await PDFDocument.create()
       for (const p of pages) {
-        const img = await doc.embedJpg(p.dataUrl)
-        // Fit each scan on an A4 page, preserving aspect, centred
-        const A4W = 595, A4H = 842
-        const scale = Math.min(A4W / p.w, A4H / p.h)
-        const dw = p.w * scale, dh = p.h * scale
-        const page = doc.addPage([A4W, A4H])
-        page.drawImage(img, { x: (A4W - dw) / 2, y: (A4H - dh) / 2, width: dw, height: dh })
+        const img = p.dataUrl.startsWith('data:image/png')
+          ? await doc.embedPng(p.dataUrl)
+          : await doc.embedJpg(p.dataUrl)
+        // Size the PDF page to the scan's own aspect ratio so the image fills it
+        // edge to edge — no white letterbox bands above/below a landscape scan.
+        // Cap the long edge to keep the file a sensible size.
+        const MAX = 1400
+        const s = Math.min(1, MAX / Math.max(p.w, p.h))
+        const pw = p.w * s, ph = p.h * s
+        const page = doc.addPage([pw, ph])
+        page.drawImage(img, { x: 0, y: 0, width: pw, height: ph })
       }
       const blob = pdfBlob(await doc.save())
       onComplete(blob)
