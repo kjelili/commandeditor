@@ -95,6 +95,17 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
 
   useEffect(() => () => stopCamera(), [])
 
+  // The <video> is only rendered when cameraOn is true, so attach the stream
+  // here — after it has mounted. Setting srcObject inside startCamera hit a null
+  // ref, leaving the preview black and videoWidth 0 (Capture did nothing).
+  useEffect(() => {
+    const v = videoRef.current
+    if (cameraOn && v && streamRef.current) {
+      v.srcObject = streamRef.current
+      v.play().catch(() => {})
+    }
+  }, [cameraOn])
+
   const startCamera = async () => {
     setCameraError(null)
     try {
@@ -103,11 +114,7 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
         audio: false,
       })
       streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-      setCameraOn(true)
+      setCameraOn(true) // renders the <video>; the effect below attaches the stream once it mounts
     } catch (e: any) {
       setCameraError('Camera unavailable: ' + (e.message || 'permission denied') + '. You can still upload photos below.')
     }
@@ -115,7 +122,7 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
 
   const capture = () => {
     const video = videoRef.current
-    if (!video || !video.videoWidth) return
+    if (!video || !video.videoWidth) { showStatus('Camera still starting — try again in a moment'); return }
     const canvas = document.createElement('canvas')
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
@@ -191,7 +198,7 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
 
       {cameraOn ? (
         <div className="space-y-2">
-          <video ref={videoRef} playsInline muted className="w-full rounded-xl" style={{ background: '#000' }} />
+          <video ref={videoRef} autoPlay playsInline muted className="w-full rounded-xl" style={{ background: '#000' }} />
           <div className="grid grid-cols-2 gap-2">
             <button onClick={capture} className="btn-primary" style={{ background: '#0d9488' }}>📸 Capture Page</button>
             <button onClick={stopCamera} className="btn-secondary">Stop Camera</button>
