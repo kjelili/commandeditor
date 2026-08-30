@@ -52,6 +52,13 @@ jobs:
           if [ ! -d android ]; then npx --no-install cap add android; fi
           npx --no-install cap sync android
 
+      - name: Ensure camera + microphone permissions (Android manifest)
+        run: |
+          MANIFEST=mobile/android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.CAMERA' "$MANIFEST" || \
+            sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n\n    <application#' "$MANIFEST"
+          echo "--- permissions in manifest ---"; grep -n 'uses-permission\|uses-feature' "$MANIFEST" || true
+
       - name: Generate branded app icons + splash (from the command mark)
         run: cd mobile && npx --no-install @capacitor/assets generate --android
 
