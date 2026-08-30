@@ -20,14 +20,60 @@ function applyFilter(ctx: CanvasRenderingContext2D, w: number, h: number, filter
   if (filter === 'color') return
   const img = ctx.getImageData(0, 0, w, h)
   const d = img.data
-  for (let i = 0; i < d.length; i += 4) {
-    const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
-    let v = lum
-    if (filter === 'doc') {
-      // document mode: aggressive contrast push toward black/white
-      v = lum < 140 ? Math.max(0, lum - 60) : 255
+  const n = w * h
+
+  // Luminance (grayscale) for every pixel.
+  const gray = new Float32Array(n)
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+    gray[p] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
+  }
+
+  if (filter === 'gray') {
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      d[i] = d[i + 1] = d[i + 2] = gray[p]
     }
-    d[i] = d[i + 1] = d[i + 2] = v
+    ctx.putImageData(img, 0, 0)
+    return
+  }
+
+  // filter === 'doc': adaptive (local) thresholding — Bradley & Roth.
+  // A fixed global threshold blanked bright/unevenly-lit captures to white;
+  // here each pixel is compared to the mean of its local window (via an
+  // integral image, so it is fast), which survives glare and shadow.
+  const stride = w + 1
+  const integral = new Float64Array(stride * (h + 1)) // Float64: sums exceed 2^24
+  for (let y = 0; y < h; y++) {
+    let rowSum = 0
+    const rowBase = y * w
+    const iRow = (y + 1) * stride
+    const iPrev = y * stride
+    for (let x = 0; x < w; x++) {
+      rowSum += gray[rowBase + x]
+      integral[iRow + x + 1] = integral[iPrev + x + 1] + rowSum
+    }
+  }
+
+  const S = Math.max(16, Math.floor(w / 8)) // local window size
+  const half = Math.floor(S / 2)
+  const T = 15 // % below local mean counts as ink
+
+  for (let y = 0; y < h; y++) {
+    const y1 = Math.max(0, y - half)
+    const y2 = Math.min(h - 1, y + half)
+    for (let x = 0; x < w; x++) {
+      const x1 = Math.max(0, x - half)
+      const x2 = Math.min(w - 1, x + half)
+      const count = (x2 - x1 + 1) * (y2 - y1 + 1)
+      const sum =
+        integral[(y2 + 1) * stride + (x2 + 1)] -
+        integral[y1 * stride + (x2 + 1)] -
+        integral[(y2 + 1) * stride + x1] +
+        integral[y1 * stride + x1]
+      const p = y * w + x
+      const idx = p * 4
+      const isInk = gray[p] * count <= sum * ((100 - T) / 100)
+      d[idx] = d[idx + 1] = d[idx + 2] = isInk ? 0 : 255
+    }
   }
   ctx.putImageData(img, 0, 0)
 }
