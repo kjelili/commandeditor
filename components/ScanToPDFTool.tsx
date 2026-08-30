@@ -110,7 +110,7 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
     setCameraError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+        video: { facingMode: 'environment', width: { ideal: 2560 }, height: { ideal: 1440 } },
         audio: false,
       })
       streamRef.current = stream
