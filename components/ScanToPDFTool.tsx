@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { pdfBlob } from '@/utils/blob'
+import { detectDocumentCorners, warpToImageData } from '@/utils/docScan'
 
 interface Props {
   onComplete: (blob: Blob) => void
@@ -85,6 +86,7 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [pages, setPages] = useState<CapturedPage[]>([])
   const [filter, setFilter] = useState<Filter>('doc')
+  const [autoCrop, setAutoCrop] = useState(true)
   const [building, setBuilding] = useState(false)
 
   const stopCamera = () => {
@@ -120,16 +122,39 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
     }
   }
 
+  // Optional page auto-detect + de-warp, then the B/W/grayscale filter, then encode.
+  const canvasToPage = (src: HTMLCanvasElement): CapturedPage => {
+    let work = src
+    if (autoCrop) {
+      const id = src.getContext('2d')!.getImageData(0, 0, src.width, src.height)
+      const corners = detectDocumentCorners(id.data, src.width, src.height)
+      if (corners) {
+        const wd = warpToImageData(id.data, src.width, src.height, corners)
+        const c = document.createElement('canvas')
+        c.width = wd.width; c.height = wd.height
+        const cctx = c.getContext('2d')!
+        const im = cctx.createImageData(wd.width, wd.height)
+        im.data.set(wd.data)
+        cctx.putImageData(im, 0, 0)
+        work = c // flattened page; if no page found we keep the full frame
+      }
+    }
+    const wctx = work.getContext('2d')!
+    applyFilter(wctx, work.width, work.height, filter)
+    return {
+      dataUrl: filter === 'color' ? work.toDataURL('image/jpeg', 0.92) : work.toDataURL('image/png'),
+      w: work.width, h: work.height,
+    }
+  }
+
   const capture = () => {
     const video = videoRef.current
     if (!video || !video.videoWidth) { showStatus('Camera still starting — try again in a moment'); return }
     const canvas = document.createElement('canvas')
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
-    const ctx = canvas.getContext('2d')!
-    ctx.drawImage(video, 0, 0)
-    applyFilter(ctx, canvas.width, canvas.height, filter)
-    setPages(prev => [...prev, { dataUrl: (filter === 'color' ? canvas.toDataURL('image/jpeg', 0.92) : canvas.toDataURL('image/png')), w: canvas.width, h: canvas.height }])
+    canvas.getContext('2d')!.drawImage(video, 0, 0)
+    setPages(prev => [...prev, canvasToPage(canvas)])
     showStatus(`📸 Page ${pages.length + 1} captured`)
   }
 
@@ -140,10 +165,8 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
       const bmp = await createImageBitmap(f)
       const canvas = document.createElement('canvas')
       canvas.width = bmp.width; canvas.height = bmp.height
-      const ctx = canvas.getContext('2d')!
-      ctx.drawImage(bmp, 0, 0)
-      applyFilter(ctx, canvas.width, canvas.height, filter)
-      setPages(prev => [...prev, { dataUrl: (filter === 'color' ? canvas.toDataURL('image/jpeg', 0.92) : canvas.toDataURL('image/png')), w: canvas.width, h: canvas.height }])
+      canvas.getContext('2d')!.drawImage(bmp, 0, 0)
+      setPages(prev => [...prev, canvasToPage(canvas)])
     }
   }
 
@@ -194,6 +217,9 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
             <input type="radio" name="scan-filter" checked={filter === f} onChange={() => setFilter(f)} /> {label}
           </label>
         ))}
+        <label className="flex items-center gap-1.5 text-xs ml-auto" style={{ color: 'var(--ink)' }}>
+          <input type="checkbox" checked={autoCrop} onChange={e => setAutoCrop(e.target.checked)} /> Auto-crop &amp; flatten
+        </label>
       </div>
 
       {cameraOn ? (
