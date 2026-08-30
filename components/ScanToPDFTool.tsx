@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { pdfBlob } from '@/utils/blob'
 import { detectDocumentCorners, warpToImageData } from '@/utils/docScan'
+import { ensureOpenCV, detectCornersCV } from '@/utils/docScanCV'
 
 interface Props {
   onComplete: (blob: Blob) => void
@@ -100,6 +101,7 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
   }
 
   useEffect(() => () => stopCamera(), [])
+  useEffect(() => { ensureOpenCV() }, []) // warm up edge-based detector (cached)
 
   // The <video> is only rendered when cameraOn is true, so attach the stream
   // here — after it has mounted. Setting srcObject inside startCamera hit a null
@@ -126,13 +128,22 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
     }
   }
 
+  // Prefer OpenCV edge/contour detection (robust on bright backgrounds); fall
+  // back to the self-contained brightness detector when OpenCV isn't ready.
+  const detectCorners = (canvas: HTMLCanvasElement): { x: number; y: number }[] | null => {
+    const viaCV = detectCornersCV(canvas)
+    if (viaCV) return viaCV
+    const id = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height)
+    return detectDocumentCorners(id.data, canvas.width, canvas.height)
+  }
+
   // Optional page auto-detect + de-warp, then the B/W/grayscale filter, then encode.
   const canvasToPage = (src: HTMLCanvasElement): CapturedPage => {
     let work = src
     if (autoCrop) {
-      const id = src.getContext('2d')!.getImageData(0, 0, src.width, src.height)
-      const corners = detectDocumentCorners(id.data, src.width, src.height)
+      const corners = detectCorners(src)
       if (corners) {
+        const id = src.getContext('2d')!.getImageData(0, 0, src.width, src.height)
         const wd = warpToImageData(id.data, src.width, src.height, corners)
         const c = document.createElement('canvas')
         c.width = wd.width; c.height = wd.height
@@ -206,7 +217,7 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
       const c = document.createElement('canvas'); c.width = smW; c.height = smH
       const cx = c.getContext('2d'); if (!cx) return
       cx.drawImage(video, 0, 0, smW, smH)
-      const corners = detectDocumentCorners(cx.getImageData(0, 0, smW, smH).data, smW, smH)
+      const corners = detectCorners(c)
       drawOverlay(corners, smW, smH, vw, vh)
       if (!corners) { st.stable = 0; st.armed = true; setDetectHint('Line up the document in the frame'); return }
       const xs = corners.map(pt => pt.x), ys = corners.map(pt => pt.y)
