@@ -82,11 +82,15 @@ function applyFilter(ctx: CanvasRenderingContext2D, w: number, h: number, filter
 export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const detRef = useRef({ timer: null as any, stable: 0, cooldown: 0, sig: '', armed: true })
   const [cameraOn, setCameraOn] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [pages, setPages] = useState<CapturedPage[]>([])
   const [filter, setFilter] = useState<Filter>('doc')
   const [autoCrop, setAutoCrop] = useState(true)
+  const [autoCapture, setAutoCapture] = useState(true)
+  const [detectHint, setDetectHint] = useState('')
+  const overlayRef = useRef<HTMLCanvasElement>(null)
   const [building, setBuilding] = useState(false)
 
   const stopCamera = () => {
@@ -158,6 +162,73 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
     showStatus(`📸 Page ${pages.length + 1} captured`)
   }
 
+  // Always call the freshest capture() from the detection interval.
+  const captureRef = useRef(capture)
+  captureRef.current = capture
+
+  const drawOverlay = (corners: { x: number; y: number }[] | null, smW: number, smH: number, vw: number, vh: number) => {
+    const ov = overlayRef.current
+    if (!ov) return
+    if (ov.width !== vw) { ov.width = vw; ov.height = vh }
+    const g = ov.getContext('2d')
+    if (!g) return
+    g.clearRect(0, 0, vw, vh)
+    if (!corners) return
+    const fx = vw / smW, fy = vh / smH
+    g.beginPath()
+    corners.forEach((pt, i) => { const x = pt.x * fx, y = pt.y * fy; if (i) g.lineTo(x, y); else g.moveTo(x, y) })
+    g.closePath()
+    g.lineWidth = Math.max(3, vw * 0.006)
+    g.strokeStyle = '#22d3ee'
+    g.stroke()
+    g.fillStyle = 'rgba(34,211,238,0.15)'
+    g.fill()
+  }
+
+  // Auto-capture: watch the live feed; when a well-framed, steady page is
+  // detected, snap it automatically so both hands are free to hold the document.
+  // Re-arms only after the page leaves the frame, so it won't shoot duplicates.
+  useEffect(() => {
+    const ov = overlayRef.current
+    if (!cameraOn || !autoCapture) {
+      setDetectHint('')
+      if (ov) ov.getContext('2d')?.clearRect(0, 0, ov.width, ov.height)
+      return
+    }
+    const st = detRef.current
+    st.stable = 0; st.cooldown = 0; st.sig = ''; st.armed = true
+    const tick = () => {
+      const video = videoRef.current
+      if (!video || !video.videoWidth) return
+      if (st.cooldown > 0) { st.cooldown--; return }
+      const vw = video.videoWidth, vh = video.videoHeight
+      const smW = 480, smH = Math.max(1, Math.round(vh * smW / vw))
+      const c = document.createElement('canvas'); c.width = smW; c.height = smH
+      const cx = c.getContext('2d'); if (!cx) return
+      cx.drawImage(video, 0, 0, smW, smH)
+      const corners = detectDocumentCorners(cx.getImageData(0, 0, smW, smH).data, smW, smH)
+      drawOverlay(corners, smW, smH, vw, vh)
+      if (!corners) { st.stable = 0; st.armed = true; setDetectHint('Line up the document in the frame'); return }
+      const xs = corners.map(pt => pt.x), ys = corners.map(pt => pt.y)
+      const minx = Math.min(...xs), maxx = Math.max(...xs), miny = Math.min(...ys), maxy = Math.max(...ys)
+      const areaFrac = ((maxx - minx) * (maxy - miny)) / (smW * smH)
+      const inView = minx > smW * 0.02 && maxx < smW * 0.98 && miny > smH * 0.02 && maxy < smH * 0.98
+      if (areaFrac < 0.30 || !inView) { st.stable = 0; st.armed = true; setDetectHint(areaFrac < 0.30 ? 'Move closer — fill the frame' : 'Fit all 4 corners in view'); return }
+      if (!st.armed) { setDetectHint('✓ Captured — present the next page'); return }
+      const sig = `${Math.round((minx + maxx) / 20)}-${Math.round((miny + maxy) / 20)}-${Math.round(areaFrac * 20)}`
+      if (sig === st.sig) st.stable++; else { st.sig = sig; st.stable = 1 }
+      if (st.stable >= 3) {
+        captureRef.current()
+        st.stable = 0; st.armed = false; st.cooldown = 4
+        setDetectHint('✓ Captured — present the next page')
+      } else {
+        setDetectHint('Hold steady…')
+      }
+    }
+    st.timer = setInterval(tick, 350)
+    return () => { clearInterval(st.timer) }
+  }, [cameraOn, autoCapture])
+
   const addFromFiles = async (files: FileList | null) => {
     if (!files) return
     for (const f of Array.from(files)) {
@@ -218,13 +289,20 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
           </label>
         ))}
         <label className="flex items-center gap-1.5 text-xs ml-auto" style={{ color: 'var(--ink)' }}>
+          <input type="checkbox" checked={autoCapture} onChange={e => setAutoCapture(e.target.checked)} /> Auto-capture
+        </label>
+        <label className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--ink)' }}>
           <input type="checkbox" checked={autoCrop} onChange={e => setAutoCrop(e.target.checked)} /> Auto-crop &amp; flatten
         </label>
       </div>
 
       {cameraOn ? (
         <div className="space-y-2">
-          <video ref={videoRef} autoPlay playsInline muted className="w-full rounded-xl" style={{ background: '#000' }} />
+          <div className="relative">
+            <video ref={videoRef} autoPlay playsInline muted className="w-full rounded-xl" style={{ background: '#000' }} />
+            <canvas ref={overlayRef} className="absolute inset-0 w-full h-full pointer-events-none rounded-xl" />
+          </div>
+          {autoCapture && detectHint && <p className="text-xs text-center font-medium" style={{ color: 'var(--ink-soft)' }}>{detectHint}</p>}
           <div className="grid grid-cols-2 gap-2">
             <button onClick={capture} className="btn-primary" style={{ background: '#0d9488' }}>📸 Capture Page</button>
             <button onClick={stopCamera} className="btn-secondary">Stop Camera</button>
