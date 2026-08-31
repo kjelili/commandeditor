@@ -1,4 +1,4 @@
-/* CommandEditor service worker — v9
+/* CommandEditor service worker — v10
  *
  * Closes the offline gap: the site already declared itself an
  * "Offline-capable PWA" (manifest + schema.org featureList) but shipped
@@ -17,7 +17,7 @@
  *   - No document data is ever cached or transmitted — processing is
  *     100% client-side; this worker only caches *code*, never user files.
  */
-const VERSION = 'ce-v9';
+const VERSION = 'ce-v10';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
