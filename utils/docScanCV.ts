@@ -98,7 +98,19 @@ export function detectCornersCV(canvas: HTMLCanvasElement): Pt[] | null {
       const peri = cv.arcLength(c, true)
       const approx = new cv.Mat()
       cv.approxPolyDP(c, approx, 0.02 * peri, true)
-      if (approx.rows === 4 && area > bestArea) {
+      let keep = false
+      if (approx.rows === 4 && cv.isContourConvex(approx)) {
+        const xs = [approx.data32S[0], approx.data32S[2], approx.data32S[4], approx.data32S[6]]
+        const ys = [approx.data32S[1], approx.data32S[3], approx.data32S[5], approx.data32S[7]]
+        const bw = Math.max(...xs) - Math.min(...xs)
+        const bh = Math.max(...ys) - Math.min(...ys)
+        // Ignore a quad that spans essentially the whole frame — that is the
+        // room (ceiling/wall) edges, not a held document.
+        const spansFrame = bw > canvas.width * 0.97 && bh > canvas.height * 0.97
+        const ar = bw / (bh || 1)
+        if (!spansFrame && ar > 0.25 && ar < 4 && area > bestArea) keep = true
+      }
+      if (keep) {
         if (best) best.delete()
         best = approx; bestArea = area
       } else {
