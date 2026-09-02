@@ -92,6 +92,14 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
   const [autoCrop, setAutoCrop] = useState(true)
   const [building, setBuilding] = useState(false)
   const [busy, setBusy] = useState(false)
+  // 'capture' on a file input only launches a camera on phones/tablets; on a
+  // laptop it is just a file picker — so we only offer 'Take Photo' on mobile.
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
+    const ua = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    setIsMobile(coarse || ua)
+  }, [])
 
   // Warm up the OpenCV edge detector (used only as a fallback for pages on
   // bright/white backgrounds). Cached on-device after first load.
@@ -208,18 +216,27 @@ export default function ScanToPDFTool({ onComplete, showStatus }: Props) {
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <label className="btn-primary text-center cursor-pointer" style={{ background: '#0d9488', opacity: busy ? 0.7 : 1 }}>
-          📷 Take Photo
-          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={onPick} disabled={busy} />
-        </label>
-        <label className="btn-secondary text-center cursor-pointer" style={{ opacity: busy ? 0.7 : 1 }}>
-          Upload Photos
+      {isMobile ? (
+        <div className="grid grid-cols-2 gap-2">
+          <label className="btn-primary text-center cursor-pointer" style={{ background: '#0d9488', opacity: busy ? 0.7 : 1 }}>
+            📷 Take Photo
+            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={onPick} disabled={busy} />
+          </label>
+          <label className="btn-secondary text-center cursor-pointer" style={{ opacity: busy ? 0.7 : 1 }}>
+            Upload Photos
+            <input type="file" accept="image/*" multiple className="hidden" onChange={onPick} disabled={busy} />
+          </label>
+        </div>
+      ) : (
+        <label className="btn-primary w-full text-center cursor-pointer block" style={{ background: '#0d9488', opacity: busy ? 0.7 : 1 }}>
+          📁 Upload Photos of the Document
           <input type="file" accept="image/*" multiple className="hidden" onChange={onPick} disabled={busy} />
         </label>
-      </div>
+      )}
       <p className="text-xs" style={{ color: 'var(--ink-muted)' }}>
-        Tip: lay the page flat on a contrasting surface, fill the frame, use good light. &ldquo;Take Photo&rdquo; opens your device&apos;s camera app.
+        {isMobile
+          ? 'Tip: lay the page flat on a contrasting surface, fill the frame, use good light. "Take Photo" opens your camera app.'
+          : 'Tip: photograph the page with your phone (flat, contrasting surface, good light), then upload it here — or open commandeditor.com on your phone to use its camera directly.'}
       </p>
 
       {pages.length > 0 && (
