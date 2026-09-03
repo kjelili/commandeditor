@@ -125,13 +125,21 @@ export async function buildSigningPackage(
 export interface AuditReport {
   startedAt: string
   durationMs: number
-  requests: Array<{ url: string; bytes: number; kind: string }>
+  requests: Array<{ url: string; bytes: number; kind: string; analytics?: boolean }>
   totalBytesOut: number
+  analyticsPings: number
   verdict: 'CLEAN' | 'ACTIVITY'
 }
 
 let auditActive = false
-let auditLog: Array<{ url: string; bytes: number; kind: string }> = []
+let auditLog: Array<{ url: string; bytes: number; kind: string; analytics?: boolean }> = []
+
+// Known anonymous, cookieless analytics endpoints (Vercel Web/Speed Insights).
+// These carry event names/counts only — never document content — so they are
+// labelled and excluded from the file-privacy verdict rather than hidden.
+function isAnalyticsUrl(url: string): boolean {
+  return /_vercel\/insights|_vercel\/speed-insights|vercel-insights\.com/.test(String(url || ''))
+}
 let restoreFns: Array<() => void> = []
 
 function estimateBodyBytes(body: any): number {
@@ -158,7 +166,7 @@ export function startNetworkAudit(): void {
     const url = typeof input === 'string' ? input : input?.url || ''
     const bytes = estimateBodyBytes(init?.body)
     if (bytes > 0 || init?.method === 'POST' || init?.method === 'PUT') {
-      auditLog.push({ url, bytes, kind: 'fetch' })
+      auditLog.push({ url, bytes, kind: 'fetch', analytics: isAnalyticsUrl(url) })
     }
     return origFetch(input, init)
   }
@@ -171,7 +179,7 @@ export function startNetworkAudit(): void {
       const meta = (this as any).__ceAudit
       const bytes = estimateBodyBytes(body)
       if (meta && (bytes > 0 || meta.method === 'POST' || meta.method === 'PUT')) {
-        auditLog.push({ url: meta.url, bytes, kind: 'xhr' })
+        auditLog.push({ url: meta.url, bytes, kind: 'xhr', analytics: isAnalyticsUrl(meta.url) })
       }
       return super.send(body)
     }
@@ -181,7 +189,7 @@ export function startNetworkAudit(): void {
   const origBeacon = navigator.sendBeacon?.bind(navigator)
   if (origBeacon) {
     navigator.sendBeacon = (url: string, data?: any) => {
-      auditLog.push({ url, bytes: estimateBodyBytes(data), kind: 'beacon' })
+      auditLog.push({ url, bytes: estimateBodyBytes(data), kind: 'beacon', analytics: isAnalyticsUrl(url) })
       return origBeacon(url, data)
     }
     restoreFns.push(() => { navigator.sendBeacon = origBeacon })
@@ -191,7 +199,7 @@ export function startNetworkAudit(): void {
   w.WebSocket = class extends OrigWS {
     constructor(url: string, protocols?: any) {
       super(url, protocols)
-      auditLog.push({ url, bytes: 0, kind: 'websocket' })
+      auditLog.push({ url, bytes: 0, kind: 'websocket', analytics: isAnalyticsUrl(url) })
     }
   }
   restoreFns.push(() => { w.WebSocket = OrigWS })
@@ -201,12 +209,17 @@ export function stopNetworkAudit(startedAt: string): AuditReport {
   restoreFns.forEach((fn) => { try { fn() } catch {} })
   restoreFns = []
   auditActive = false
-  const totalBytesOut = auditLog.reduce((a, r) => a + Math.max(0, r.bytes), 0)
+  const docEgress = auditLog.filter((r) => !r.analytics)
+  const analyticsPings = auditLog.length - docEgress.length
+  const totalBytesOut = docEgress.reduce((a, r) => a + Math.max(0, r.bytes), 0)
   return {
     startedAt,
     durationMs: Date.now() - new Date(startedAt).getTime(),
     requests: [...auditLog],
     totalBytesOut,
-    verdict: auditLog.length === 0 ? 'CLEAN' : 'ACTIVITY',
+    analyticsPings,
+    // CLEAN = no DOCUMENT data left the device. Anonymous analytics pings (no
+    // file content) are listed for transparency but do not fail the verdict.
+    verdict: docEgress.length === 0 ? 'CLEAN' : 'ACTIVITY',
   }
 }

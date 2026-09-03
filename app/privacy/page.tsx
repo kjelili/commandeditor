@@ -25,8 +25,8 @@ export default function PrivacyPage() {
       <p>The in-browser AI assistant downloads its language model from a public CDN (Hugging Face) the first time you use it. Only the model files are downloaded to your browser; the content of your documents is analysed locally and is not sent to Hugging Face, CommandEditor, or any other party.</p>
       <H>5. Hosting and server logs</H>
       <p>The CommandEditor website is served as static files by our hosting provider. Like virtually all web hosts, it may automatically record standard technical request information (such as IP address, browser type and timestamps) for security and reliability. These logs are not used to identify you and are not linked to your documents, which never reach the server.</p>
-      <H>6. No sale of data, no advertising</H>
-      <p>CommandEditor does not sell, rent or trade personal information, and does not run third-party advertising.</p>
+      <H>6. Anonymous analytics, no sale of data, no advertising</H>
+      <p>CommandEditor uses privacy-friendly, cookieless, aggregate web analytics (Vercel Web Analytics) to count anonymous page views and app installs, so we can understand adoption. These carry no file content and no personal data, set no cookies, and are never used for advertising or cross-site tracking; nothing is sent during document processing. CommandEditor does not sell, rent or trade personal information, and does not run third-party advertising.</p>
       <H>7. Children</H>
       <p>CommandEditor is a general-purpose tool and is not directed at children under 13. We do not knowingly collect personal information from children.</p>
       <H>8. Changes</H>

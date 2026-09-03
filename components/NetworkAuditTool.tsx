@@ -68,18 +68,23 @@ export default function NetworkAuditTool() {
           <div className="px-4 py-3 rounded-xl text-center"
                style={{ background: report.verdict === 'CLEAN' ? 'var(--green-light)' : 'var(--red-light, #fee2e2)' }}>
             <p className="font-bold text-sm">
-              {report.verdict === 'CLEAN' ? '✓ CLEAN — zero bytes left this device' : `⚠ ${report.requests.length} outbound request${report.requests.length !== 1 ? 's' : ''} detected`}
+              {report.verdict === 'CLEAN' ? '✓ CLEAN — no document data left this device' : `⚠ ${report.requests.filter(r => !r.analytics).length} document request${report.requests.filter(r => !r.analytics).length !== 1 ? 's' : ''} detected`}
             </p>
             <p className="text-xs mt-1" style={{ color: 'var(--ink-muted)' }}>
-              {(report.durationMs / 1000).toFixed(0)}s window · {report.totalBytesOut.toLocaleString()} bytes out
+              {(report.durationMs / 1000).toFixed(0)}s window · {report.totalBytesOut.toLocaleString()} document bytes out
             </p>
+            {report.analyticsPings > 0 && (
+              <p className="text-xs mt-1" style={{ color: 'var(--ink-muted)' }}>
+                + {report.analyticsPings} anonymous analytics ping{report.analyticsPings !== 1 ? 's' : ''} (event counts only — no file content)
+              </p>
+            )}
           </div>
           {report.requests.length > 0 && (
             <div className="space-y-1 max-h-40 overflow-y-auto">
               {report.requests.map((r, i) => (
                 <div key={i} className="text-xs px-3 py-1.5 rounded-lg font-mono break-all"
                      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                  <span style={{ color: 'var(--ink-muted)' }}>[{r.kind}]</span> {r.url} — {r.bytes} B
+                  <span style={{ color: 'var(--ink-muted)' }}>[{r.kind}{r.analytics ? ' · analytics' : ''}]</span> {r.url} — {r.bytes} B
                 </div>
               ))}
             </div>

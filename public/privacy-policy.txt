@@ -42,8 +42,12 @@ means in practice and the few places where data does leave your browser.
    server.
 
 6. NO SALE OF DATA, NO ADVERTISING
-   CommandEditor does not sell, rent or trade personal information, and does
-   not run third-party advertising.
+   CommandEditor uses privacy-friendly, cookieless, aggregate web analytics
+   (Vercel Web Analytics) to count anonymous page views and app installs. These
+   carry no file content and no personal data, set no cookies, and are never used
+   for advertising or cross-site tracking; nothing is sent during document
+   processing. CommandEditor does not sell, rent or trade personal information,
+   and does not run third-party advertising.
 
 7. CHILDREN
    CommandEditor is a general-purpose tool and is not directed at children

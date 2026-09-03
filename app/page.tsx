@@ -16,6 +16,7 @@ const ESignatureWorkflow = dynamic(() => import('@/components/ESignatureWorkflow
 const FormBuilder = dynamic(() => import('@/components/FormBuilder').then(m => m.FormBuilder), { ssr: false })
 const VisualDiff = dynamic(() => import('@/components/VisualDiff').then(m => m.VisualDiff), { ssr: false })
 import { IS_DESKTOP } from '@/utils/platform'
+import { track } from '@vercel/analytics'
 const CloudConnector = dynamic(() => import('@/components/CloudConnector').then(m => m.CloudConnector), { ssr: false })
 const AIAssistant = dynamic(() => import('@/components/AIAssistant').then(m => m.AIAssistant), { ssr: false })
 
@@ -345,6 +346,15 @@ export default function Home() {
     else url.searchParams.delete('tool')
     window.history.replaceState({}, '', url.toString())
   }, [selectedTool])
+
+  // Anonymous, aggregate install counting (Vercel Web Analytics). Fires only on
+  // the PWA install event — never during document work — and never includes any
+  // file content, so the Proof-of-No-Upload audit stays clean while using tools.
+  useEffect(() => {
+    const onInstalled = () => { try { track('pwa_install') } catch {} }
+    window.addEventListener('appinstalled', onInstalled)
+    return () => window.removeEventListener('appinstalled', onInstalled)
+  }, [])
 
   const handleProcessingComplete = (result: Blob, toolName?: string) => {
     setProcessedFile(result); processedFileRef.current = result

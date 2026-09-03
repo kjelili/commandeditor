@@ -27,7 +27,7 @@ a SHA-256 hash — never the document.
 HTTPS only with HSTS (preloaded); strict Content-Security-Policy; X-Frame-Options
 DENY and frame-ancestors 'none'; X-Content-Type-Options nosniff; restrictive
 Permissions-Policy; object-src 'none'. Untrusted HTML (converted files, AI output)
-is sanitized before rendering. No third-party trackers or advertising.
+is sanitized before rendering. No advertising or cross-site tracking cookies; only privacy-friendly cookieless aggregate analytics (see section 8).
 
 5. DATA PROTECTION & GDPR
 No personal data collected on any server, no user accounts, no server-side logging
@@ -48,8 +48,8 @@ per-recipient document fingerprinting for leak attribution, tamper-evident seals
 and a downloadable cryptographic audit trail for signatures.
 
 8. WHAT COMMANDEDITOR DELIBERATELY DOES NOT DO
-No activity telemetry/analytics, no advertising, no account requirement, no
-server-side copies of your files, no transmission of document content to any third
+No advertising, no cross-site tracking, no account requirement, no server-side
+copies of your files, no transmission of document content to any third
 party (including for AI, which runs locally).
 
 9. VULNERABILITY DISCLOSURE
