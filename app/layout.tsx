@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   // (NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION / NEXT_PUBLIC_BING_SITE_VERIFICATION);
   // the meta tags appear automatically, no code change needed.
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    google: 'cBEp0vWlYdIqoybswdqSgIPhS09MN0gGNjN2o8pMW3E',
     other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
       ? { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
       : {},
