@@ -34,7 +34,7 @@ ok(bSize.width > bSize.height, 'booklet: sheets are landscape')
 
 // verify placement via pdf.js text extraction: side 1 must contain "Page 8" and "Page 1"
 const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs' as any)
-;(pdfjs as any).GlobalWorkerOptions.workerSrc = '/tmp/ce/node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs'
+;(pdfjs as any).GlobalWorkerOptions.workerSrc = new URL('../node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).pathname
 const pj = await (pdfjs as any).getDocument({ data: await b.arrayBuffer() }).promise
 const t1 = (await (await pj.getPage(1)).getTextContent()).items.map((i: any) => i.str).join(' ')
 ok(t1.includes('Page 8') && t1.includes('Page 1'), 'booklet: side 1 holds pages 8+1')

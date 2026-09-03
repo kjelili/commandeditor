@@ -60,7 +60,7 @@ ok(d5.catalog.has(PDFName.of('Outlines')), 'bookmarks: catalog has Outlines')
 
 // verify via pdf.js that the outline is readable and destinations resolve
 const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs' as any)
-;(pdfjs as any).GlobalWorkerOptions.workerSrc = '/tmp/ce/node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs'
+;(pdfjs as any).GlobalWorkerOptions.workerSrc = new URL('../node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).pathname
 const pj = await (pdfjs as any).getDocument({ data: await withBm.blob.arrayBuffer() }).promise
 const outline = await pj.getOutline()
 ok(outline?.length === 2 && outline[0].title === 'Intro' && outline[1].title === 'Part 1', 'bookmarks: pdf.js reads top-level outline')

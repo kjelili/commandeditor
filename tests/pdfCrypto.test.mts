@@ -40,7 +40,7 @@ ok(!ptext.includes('Top secret'), 'protect: content stream encrypted')
 
 // ── pdf.js must open it with the right password, reject the wrong one ──
 const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs' as any)
-;(pdfjs as any).GlobalWorkerOptions.workerSrc = '/tmp/ce/node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs'
+;(pdfjs as any).GlobalWorkerOptions.workerSrc = new URL('../node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).pathname
 let rejected = false
 try {
   const bad = await (pdfjs as any).getDocument({ data: pbytes.slice(), password: 'wrong-password' }).promise

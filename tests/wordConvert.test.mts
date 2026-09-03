@@ -90,7 +90,7 @@ await ok('end-to-end: styled PDF produces styled docx XML', async () => {
   const bytes = await doc.save()
 
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  pdfjs.GlobalWorkerOptions.workerSrc = '/tmp/ce/node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs'
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL('../node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).pathname
   const pdf = await pdfjs.getDocument({ data: bytes }).promise
   const pages = []
   for (let i = 1; i <= pdf.numPages; i++) {
