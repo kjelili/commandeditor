@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CommandEditor — Voice-controlled PDF toolkit',
+    title: 'CommandEditor — Free PDF Editor Online, No Upload',
     description: 'A private PDF toolkit with 113 tools — AI assistant, e-signatures, redaction, and 60+ voice commands, all in your browser. No uploads, no sign-up, free forever.',
   },
   robots: { index: true, follow: true },
