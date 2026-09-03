@@ -20,6 +20,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/compare/pdf24/`, changeFrequency: 'monthly', priority: 0.8, lastModified: now },
     { url: `${BASE}/factur-x/`, changeFrequency: 'monthly', priority: 0.9, lastModified: now },
     { url: `${BASE}/no-upload/`, changeFrequency: 'yearly', priority: 0.7, lastModified: now },
+    { url: `${BASE}/security/`, changeFrequency: 'monthly', priority: 0.7, lastModified: now },
     { url: `${BASE}/ai/`, changeFrequency: 'monthly', priority: 0.8, lastModified: now },
     { url: `${BASE}/privacy/`, changeFrequency: 'yearly', priority: 0.3, lastModified: now },
     { url: `${BASE}/terms/`, changeFrequency: 'yearly', priority: 0.3, lastModified: now },
