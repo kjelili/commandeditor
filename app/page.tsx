@@ -1272,9 +1272,9 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { name: 'Sarah K.', role: 'Paralegal', avatar: '👩‍💼', rating: 5, text: "CommandEditor has replaced Adobe Acrobat for me entirely. The redaction and signature tools work flawlessly and I love that nothing leaves my computer. The voice commands are a game-changer." },
-              { name: 'James O.', role: 'Freelance Designer', avatar: '🧑‍🎨', rating: 5, text: "I use it every week to merge client briefs, add watermarks, and export pages as images. The before/after comparison after compression is exactly what I needed. Incredibly fast too." },
-              { name: 'Priya M.', role: 'Academic Researcher', avatar: '👩‍🔬', rating: 5, text: "The PDF to Markdown export is perfect for my workflow — I can pull text from papers straight into my notes. The search inside PDF previews is also excellent. Highly recommend." },
+              { name: 'Muiz K.', role: 'Integration Expert · Canada', avatar: '👨🏽‍💻', rating: 5, text: "As an integration expert, where data goes matters to me — CommandEditor runs entirely in the browser, so client documents never touch a server. The CLI and batch tools drop straight into my automation, and it has replaced three separate paid tools." },
+              { name: 'Austin J.', role: 'CEO, Amazing Learning Hub · UK', avatar: '👨🏾‍💼', rating: 5, text: "We handle a lot of learner paperwork and privacy is non-negotiable. My team merges, signs and redacts documents without uploading anything or paying per seat. It’s become a daily tool across the whole organisation." },
+              { name: 'Taiwo A.', role: 'Health Expert · Nigeria', avatar: '👩🏾‍⚕️', rating: 5, text: "In healthcare, patient documents simply cannot leave the device — that is exactly what CommandEditor guarantees. The redaction and encryption tools are reliable, and knowing nothing is uploaded gives me real peace of mind." },
             ].map((t, i) => (
               <div key={t.name} className="testimonial-card animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
                 <div className="flex items-center gap-3 mb-4">
