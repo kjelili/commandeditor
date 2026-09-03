@@ -4,7 +4,7 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Proof of no upload — verify it yourself | CommandEditor',
   description: 'CommandEditor processes PDFs 100% in your browser. Don\'t take our word for it: three ways to verify that your files never leave your device — network inspector, offline test, and open source code.',
-  alternates: { canonical: 'https://commandeditor.com/no-upload' },
+  alternates: { canonical: 'https://www.commandeditor.com/no-upload' },
 }
 
 export default function NoUploadPage() {

@@ -4,7 +4,7 @@ import ComparePage from '@/components/ComparePage'
 export const metadata: Metadata = {
   title: 'CommandEditor vs Smallpdf — the free-tier reality check',
   description: 'Smallpdf limits free users to a couple of tasks per day and uploads files. CommandEditor offers 110+ private in-browser tools with no daily limits, no account, and offline support.',
-  alternates: { canonical: 'https://commandeditor.com/compare/smallpdf' },
+  alternates: { canonical: 'https://www.commandeditor.com/compare/smallpdf' },
 }
 
 export default function Page() {

@@ -4,7 +4,7 @@ import ComparePage from '@/components/ComparePage'
 export const metadata: Metadata = {
   title: 'CommandEditor vs iLovePDF — free, private PDF tools compared',
   description: 'iLovePDF uploads your files to its servers and caps the free tier. CommandEditor runs 110+ tools entirely in your browser — no uploads, no limits, no sign-up. See the honest comparison.',
-  alternates: { canonical: 'https://commandeditor.com/compare/ilovepdf' },
+  alternates: { canonical: 'https://www.commandeditor.com/compare/ilovepdf' },
 }
 
 export default function Page() {

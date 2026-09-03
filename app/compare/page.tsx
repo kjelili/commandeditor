@@ -4,7 +4,7 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Compare CommandEditor — honest head-to-heads with the big PDF tools',
   description: 'Side-by-side comparisons: CommandEditor vs iLovePDF, Smallpdf, and Adobe Acrobat Online. Privacy, limits, price, and features — fairly stated.',
-  alternates: { canonical: 'https://commandeditor.com/compare' },
+  alternates: { canonical: 'https://www.commandeditor.com/compare' },
 }
 
 const COMPARISONS = [

@@ -6,7 +6,7 @@ import { SEO_TOOLS } from '@/lib/seoTools'
 // with the Tauri static export (TAURI_BUILD=1).
 export const dynamic = 'force-static'
 
-const BASE = 'https://commandeditor.com'
+const BASE = 'https://www.commandeditor.com'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()

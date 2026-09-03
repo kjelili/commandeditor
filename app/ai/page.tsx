@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: 'Private AI for PDFs — on-device, no upload | CommandEditor',
   description: 'Chat with your PDF, summarize and ask questions — with AI that runs on your own device. Your document is never sent to a cloud model. Free, no sign-up, no AI credits.',
   keywords: ['private ai pdf', 'chat with pdf private', 'on-device ai', 'offline pdf ai', 'chatpdf alternative privacy'],
-  alternates: { canonical: 'https://commandeditor.com/ai' },
+  alternates: { canonical: 'https://www.commandeditor.com/ai' },
 }
 
 export default function AiPage() {

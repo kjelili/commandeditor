@@ -4,7 +4,7 @@ import ComparePage from '@/components/ComparePage'
 export const metadata: Metadata = {
   title: 'CommandEditor vs PDF24 — free PDF tools compared honestly',
   description: 'PDF24 is free but uploads your files to its servers and shows ads. CommandEditor runs 110+ tools entirely in your browser — no uploads, no ads, works offline. See the honest comparison.',
-  alternates: { canonical: 'https://commandeditor.com/compare/pdf24' },
+  alternates: { canonical: 'https://www.commandeditor.com/compare/pdf24' },
 }
 
 export default function Page() {

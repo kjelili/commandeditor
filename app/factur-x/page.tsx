@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: 'Factur-X / ZUGFeRD e-invoice generator — free, EN 16931, no upload',
   description: 'Create Factur-X (ZUGFeRD) compliant e-invoices free: attach EN 16931 XML to your invoice PDF in your browser. Ready for the German and French B2B e-invoicing mandates. No upload, no account.',
   keywords: ['factur-x', 'zugferd', 'en 16931', 'xrechnung', 'e-invoice germany', 'e-invoicing mandate france', 'e-rechnung'],
-  alternates: { canonical: 'https://commandeditor.com/factur-x' },
+  alternates: { canonical: 'https://www.commandeditor.com/factur-x' },
 }
 
 const faqJsonLd = {

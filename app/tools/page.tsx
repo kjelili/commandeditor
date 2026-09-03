@@ -5,7 +5,7 @@ import { SEO_TOOLS } from '@/lib/seoTools'
 export const metadata: Metadata = {
   title: 'Free PDF tools — no upload, no sign-up | CommandEditor',
   description: 'Every CommandEditor PDF tool runs entirely in your browser: merge, split, compress, PDF to Word, OCR, sign, redact, and 100+ more. Free forever, files never leave your device.',
-  alternates: { canonical: 'https://commandeditor.com/tools' },
+  alternates: { canonical: 'https://www.commandeditor.com/tools' },
 }
 
 export default function ToolsIndex() {

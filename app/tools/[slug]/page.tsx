@@ -18,8 +18,8 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
     title,
     description,
     keywords: tool.keywords,
-    alternates: { canonical: `https://commandeditor.com/tools/${tool.id}` },
-    openGraph: { title, description, url: `https://commandeditor.com/tools/${tool.id}`, type: 'website' },
+    alternates: { canonical: `https://www.commandeditor.com/tools/${tool.id}` },
+    openGraph: { title, description, url: `https://www.commandeditor.com/tools/${tool.id}`, type: 'website' },
   }
 }
 
@@ -37,9 +37,9 @@ export default function ToolLandingPage({ params }: { params: { slug: string } }
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'CommandEditor', item: 'https://commandeditor.com' },
-      { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://commandeditor.com/tools' },
-      { '@type': 'ListItem', position: 3, name: tool.title, item: `https://commandeditor.com/tools/${tool.id}` },
+      { '@type': 'ListItem', position: 1, name: 'CommandEditor', item: 'https://www.commandeditor.com' },
+      { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://www.commandeditor.com/tools' },
+      { '@type': 'ListItem', position: 3, name: tool.title, item: `https://www.commandeditor.com/tools/${tool.id}` },
     ],
   }
   const faqJsonLd = {

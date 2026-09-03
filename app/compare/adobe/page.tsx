@@ -4,7 +4,7 @@ import ComparePage from '@/components/ComparePage'
 export const metadata: Metadata = {
   title: 'CommandEditor vs Adobe Acrobat Online — free without the sign-in wall',
   description: 'Adobe Acrobat Online requires sign-in and uploads; Acrobat Pro costs $240/year. CommandEditor gives you 110+ PDF tools in-browser with zero uploads and zero cost.',
-  alternates: { canonical: 'https://commandeditor.com/compare/adobe' },
+  alternates: { canonical: 'https://www.commandeditor.com/compare/adobe' },
 }
 
 export default function Page() {

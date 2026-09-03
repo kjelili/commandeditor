@@ -3,7 +3,7 @@ import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://commandeditor.com'),
+  metadataBase: new URL('https://www.commandeditor.com'),
   title: {
     default: 'CommandEditor — Free PDF Editor Online, No Upload (113 Tools)',
     template: '%s · CommandEditor',
@@ -20,13 +20,13 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'CommandEditor' },
   applicationName: 'CommandEditor',
   authors: [{ name: 'CommandEditor' }],
-  alternates: { canonical: 'https://commandeditor.com' },
+  alternates: { canonical: 'https://www.commandeditor.com' },
   openGraph: {
     title: 'CommandEditor — Free PDF Editor Online, No Upload',
     description:
       '113 PDF tools, an on-device AI assistant, cryptographic e-signatures, and 60+ hands-free voice commands — zero uploads. Every operation runs in your browser; your documents never leave your device.',
     type: 'website',
-    url: 'https://commandeditor.com',
+    url: 'https://www.commandeditor.com',
     siteName: 'CommandEditor',
   },
   twitter: {
@@ -70,7 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               '@context': 'https://schema.org',
               '@type': 'WebApplication',
               name: 'CommandEditor',
-              url: 'https://commandeditor.com',
+              url: 'https://www.commandeditor.com',
               applicationCategory: 'ProductivityApplication',
               operatingSystem: 'Any (browser-based)',
               description:

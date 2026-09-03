@@ -3,4 +3,4 @@ Allow: /
 Disallow: /_next/
 Disallow: /api/
 
-Sitemap: https://commandeditor.com/sitemap.xml
+Sitemap: https://www.commandeditor.com/sitemap.xml
