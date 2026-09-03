@@ -260,6 +260,18 @@ export const SEO_TOOLS: SeoTool[] = [
     faqs: [PRIVACY_FAQ, { q: 'Text or visual diff?', a: 'Both — a text-level diff here, and pixel-perfect Visual PDF Comparison as a separate tool for layout changes.' }],
     related: ['visualdiff', 'redline', 'hashcheck'], keywords: ['compare pdf files', 'pdf diff', 'find changes between pdfs'],
   },
+  {
+    id: 'inplaceedit', title: 'Edit PDF', blurb: 'Click any text in a PDF and edit it directly — fix typos, change words, update dates — right in your browser.',
+    steps: ['Drop a PDF onto the page', 'Click the text you want to change and type your edit', 'Download the edited PDF — the original font is matched automatically'],
+    faqs: [PRIVACY_FAQ, { q: 'Can I edit a scanned PDF?', a: 'Scanned pages are images, so run OCR first to make the text selectable, then edit. Native (digital) PDFs can be edited directly.' }, { q: 'Will my edit match the original font?', a: 'CommandEditor detects the original font family (serif vs sans-serif) and embeds a close match, so your changes blend in.' }],
+    related: ['ocr', 'totext', 'sign', 'merge'], keywords: ['edit pdf', 'edit pdf online', 'edit pdf text', 'free pdf editor', 'change text in pdf'],
+  },
+  {
+    id: 'formfill', title: 'Fill PDF Forms', blurb: 'Fill in PDF form fields — or add text to a flat, non-interactive form — and download the completed document, in your browser.',
+    steps: ['Drop your PDF form onto the page', 'Type into the detected fields, or click anywhere to add text on a flat form', 'Download the completed PDF'],
+    faqs: [PRIVACY_FAQ, { q: 'My form has no fillable fields — can I still complete it?', a: 'Yes. CommandEditor detects flat (non-interactive) forms and lets you place text anywhere, so scanned or printed forms work too.' }, { q: 'Can I fill many copies from a spreadsheet?', a: 'Yes — Form Intelligence supports CSV mail-merge, producing one filled PDF per row.' }],
+    related: ['sign', 'esign', 'formextract'], keywords: ['fill pdf form', 'pdf form filler', 'complete pdf form', 'fill out pdf online'],
+  },
 ]
 
 export const SEO_SLUGS = SEO_TOOLS.map(t => t.id)

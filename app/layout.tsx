@@ -35,6 +35,15 @@ export const metadata: Metadata = {
     description: 'A private PDF toolkit with 113 tools — AI assistant, e-signatures, redaction, and 60+ voice commands, all in your browser. No uploads, no sign-up, free forever.',
   },
   robots: { index: true, follow: true },
+  // Search Console / Bing verification — set the codes as Vercel env vars
+  // (NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION / NEXT_PUBLIC_BING_SITE_VERIFICATION);
+  // the meta tags appear automatically, no code change needed.
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : {},
+  },
 }
 
 export const viewport: Viewport = {

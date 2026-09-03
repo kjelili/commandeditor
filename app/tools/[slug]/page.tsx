@@ -33,6 +33,15 @@ export default function ToolLandingPage({ params }: { params: { slug: string } }
     name: `How to ${tool.title.toLowerCase()} without uploading`,
     step: tool.steps.map((s, i) => ({ '@type': 'HowToStep', position: i + 1, text: s })),
   }
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'CommandEditor', item: 'https://commandeditor.com' },
+      { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://commandeditor.com/tools' },
+      { '@type': 'ListItem', position: 3, name: tool.title, item: `https://commandeditor.com/tools/${tool.id}` },
+    ],
+  }
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -44,6 +53,7 @@ export default function ToolLandingPage({ params }: { params: { slug: string } }
 
   return (
     <main className="min-h-screen" style={{ background: 'var(--navy, #0d1b3e)', color: 'white' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <div className="max-w-3xl mx-auto px-4 py-16">
@@ -103,7 +113,7 @@ export default function ToolLandingPage({ params }: { params: { slug: string } }
         </div>
 
         <p className="text-xs mt-12" style={{ color: 'rgba(255,255,255,0.4)' }}>
-          CommandEditor is open source and free forever. 110+ tools, 60+ voice commands,
+          CommandEditor is open source and free forever. 113 tools, 60+ voice commands,
           on-device AI — your files never leave your device.
         </p>
       </div>
