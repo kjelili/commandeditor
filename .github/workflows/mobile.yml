@@ -14,6 +14,11 @@ on:
 jobs:
   android:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
 
@@ -62,10 +67,36 @@ jobs:
       - name: Generate branded app icons + splash (from the command mark)
         run: cd mobile && npx --no-install @capacitor/assets generate --android
 
+      # --- Signed release AAB (only when signing secrets are present) ---
+      - name: Decode release keystore
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      - name: Build signed release AAB
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        run: |
+          cd mobile/android && chmod +x ./gradlew
+          ./gradlew bundleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.keystore" \
+            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+
+      - name: Upload signed AAB
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: commandeditor-android-release-aab
+          path: mobile/android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+
+      # --- Debug APK fallback (when no signing secrets configured) ---
       - name: Build debug APK
+        if: env.ANDROID_KEYSTORE_BASE64 == ''
         run: cd mobile/android && chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon
 
-      - name: Upload APK
+      - name: Upload debug APK
+        if: env.ANDROID_KEYSTORE_BASE64 == ''
         uses: actions/upload-artifact@v4
         with:
           name: commandeditor-android-debug
