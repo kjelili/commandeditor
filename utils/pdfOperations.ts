@@ -46,16 +46,26 @@ export async function compressPDF(
   const buf = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: buf }).promise
   const jsPdfDoc = new jsPDF({ unit: 'pt', compress: true })
+  // Rasterize at a legible resolution INDEPENDENT of the quality slider so text
+  // stays crisp; file size is controlled by JPEG quality, not by starving the
+  // render resolution. (Previously scale = quality*2 gave ~1.2x = dull, soft
+  // pages, and also made the PDF page dimensions drift with the slider.)
+  const renderScale = quality < 0.4 ? 1.7 : 2.2 // ~122–158 DPI
+  const jpegQuality = Math.max(0.55, Math.min(0.92, quality)) // floor stops wash-out
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
-    const vp = page.getViewport({ scale: quality * 2 })
+    const vp = page.getViewport({ scale: renderScale })
     const canvas = document.createElement('canvas')
-    canvas.width = vp.width; canvas.height = vp.height
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
-    const imgData = canvas.toDataURL('image/jpeg', quality)
-    if (i > 1) jsPdfDoc.addPage([vp.width, vp.height])
-    else { (jsPdfDoc as any).internal.pageSize.width = vp.width; (jsPdfDoc as any).internal.pageSize.height = vp.height }
-    jsPdfDoc.addImage(imgData, 'JPEG', 0, 0, vp.width, vp.height)
+    canvas.width = Math.floor(vp.width); canvas.height = Math.floor(vp.height)
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height) // opaque white — no dull black matte under JPEG
+    await page.render({ canvasContext: ctx, viewport: vp, background: '#ffffff' }).promise
+    const imgData = canvas.toDataURL('image/jpeg', jpegQuality)
+    // Keep the PDF page at its true point size; the high-res raster gives DPI.
+    const pw = vp.width / renderScale, ph = vp.height / renderScale
+    if (i > 1) jsPdfDoc.addPage([pw, ph])
+    else { (jsPdfDoc as any).internal.pageSize.width = pw; (jsPdfDoc as any).internal.pageSize.height = ph }
+    jsPdfDoc.addImage(imgData, 'JPEG', 0, 0, pw, ph)
     onProgress?.(i, pdf.numPages)
   }
   return new Blob([jsPdfDoc.output('arraybuffer')], { type: 'application/pdf' })
@@ -95,8 +105,11 @@ export async function convertPDFToImages(
     const vp = page.getViewport({ scale })
     const canvas = document.createElement('canvas')
     canvas.width = vp.width; canvas.height = vp.height
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
-    blobs.push(await new Promise<Blob>(res => canvas.toBlob(b => res(b!), mime[format], 0.92)))
+    const ctx = canvas.getContext('2d')!
+    // White matte only for opaque formats (JPEG); keep PNG/WebP transparency intact.
+    if (format !== 'png') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height) }
+    await page.render({ canvasContext: ctx, viewport: vp }).promise
+    blobs.push(await new Promise<Blob>(res => canvas.toBlob(b => res(b!), mime[format], 0.95)))
     onProgress?.(i, pdf.numPages)
   }
   return blobs

@@ -71,8 +71,10 @@ export default function PDFViewer({
     const vp = page.getViewport({ scale });
     const canvas = document.createElement('canvas');
     canvas.width = vp.width; canvas.height = vp.height;
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise;
-    return canvas.toDataURL('image/jpeg', 0.85);
+    const tctx = canvas.getContext('2d')!;
+    tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: tctx, viewport: vp, background: '#ffffff' }).promise;
+    return canvas.toDataURL('image/jpeg', 0.92);
   }, []);
 
   const doRender = useCallback(async (arrayBuffer: ArrayBuffer, isProcessed = false) => {
@@ -107,7 +109,8 @@ export default function PDFViewer({
           const ctx = canvas.getContext('2d');
           if (!ctx) continue;
           canvas.width = viewport.width; canvas.height = viewport.height;
-          await page.render({ canvasContext: ctx, viewport }).promise;
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: ctx, viewport, background: '#ffffff' }).promise;
           let textItems: PageThumb['textItems'] = [];
           try {
             const tc = await page.getTextContent();
@@ -137,7 +140,8 @@ export default function PDFViewer({
           const ctx = canvas.getContext('2d');
           if (!ctx) continue;
           canvas.width = viewport.width; canvas.height = viewport.height;
-          await page.render({ canvasContext: ctx, viewport }).promise;
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: ctx, viewport, background: '#ffffff' }).promise;
           let textItems: PageThumb['textItems'] = [];
           try {
             const tc = await page.getTextContent();
