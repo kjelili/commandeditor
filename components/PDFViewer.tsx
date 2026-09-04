@@ -98,13 +98,15 @@ export default function PDFViewer({
         setPageOrder(order);
 
         // Capture before-thumbnail from page 1
-        const bf = await renderPageThumb(pdfjsLib, pdf, 1, 0.4);
+        const bf = await renderPageThumb(pdfjsLib, pdf, 1, 1.4);
         setBeforeThumb(bf);
 
         const thumbs: PageThumb[] = [];
+        // Higher render scale for crisp previews; back off for very large docs to save memory.
+        const thumbScale = pdf.numPages > 40 ? 0.8 : pdf.numPages > 15 ? 1.1 : 1.5;
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 0.6 });
+          const viewport = page.getViewport({ scale: thumbScale });
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           if (!ctx) continue;
@@ -118,13 +120,13 @@ export default function PDFViewer({
               str: item.str, transform: item.transform, width: item.width, height: item.height,
             }));
           } catch {}
-          const thumb: PageThumb = { pageNum: i, dataUrl: canvas.toDataURL('image/jpeg', 0.82), width: viewport.width, height: viewport.height, textItems };
+          const thumb: PageThumb = { pageNum: i, dataUrl: canvas.toDataURL('image/jpeg', 0.9), width: viewport.width, height: viewport.height, textItems };
           thumbs.push(thumb);
           setPages(prev => [...prev, thumb]);
         }
       } else {
         // After processing: grab page 1 thumb for before/after
-        const af = await renderPageThumb(pdfjsLib, pdf, 1, 0.4);
+        const af = await renderPageThumb(pdfjsLib, pdf, 1, 1.4);
         setAfterThumb(af);
         setShowBeforeAfter(true);
 
@@ -133,9 +135,10 @@ export default function PDFViewer({
         setTotalPages(pdf.numPages);
         const order = Array.from({ length: pdf.numPages }, (_, i) => i + 1);
         setPageOrder(order);
+        const thumbScale2 = pdf.numPages > 40 ? 0.8 : pdf.numPages > 15 ? 1.1 : 1.5;
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 0.6 });
+          const viewport = page.getViewport({ scale: thumbScale2 });
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           if (!ctx) continue;
@@ -147,7 +150,7 @@ export default function PDFViewer({
             const tc = await page.getTextContent();
             textItems = (tc.items as any[]).map(item => ({ str: item.str, transform: item.transform, width: item.width, height: item.height }));
           } catch {}
-          setPages(prev => [...prev, { pageNum: i, dataUrl: canvas.toDataURL('image/jpeg', 0.82), width: viewport.width, height: viewport.height, textItems }]);
+          setPages(prev => [...prev, { pageNum: i, dataUrl: canvas.toDataURL('image/jpeg', 0.9), width: viewport.width, height: viewport.height, textItems }]);
         }
       }
     } catch (err: any) {

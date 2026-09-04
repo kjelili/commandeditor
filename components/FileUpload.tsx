@@ -38,8 +38,12 @@ export default function FileUpload({ onFilesUpload, uploadedFiles }: FileUploadP
       )
     })
     if (fileInputRef.current) fileInputRef.current.value = ''
-    if (accepted.length > 0) onFilesUpload(accepted)
-    else alert('Please upload: PDF, Images, Word, Text, HTML, or Markdown files')
+    if (accepted.length > 0) {
+      // Accumulate: adding a file keeps the ones already loaded (needed for
+      // Merge, batch, etc.). De-dupe by name + size so re-adding is a no-op.
+      const fresh = accepted.filter(a => !uploadedFiles.some(e => e.name === a.name && e.size === a.size))
+      onFilesUpload([...uploadedFiles, ...fresh])
+    } else alert('Please upload: PDF, Images, Word, Text, HTML, or Markdown files')
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -60,7 +64,8 @@ export default function FileUpload({ onFilesUpload, uploadedFiles }: FileUploadP
       const nameMatch = cdHeader?.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
       const name = nameMatch ? nameMatch[1].replace(/['"]/g, '') : fallbackName
       const file = new File([blob], name, { type: contentType })
-      onFilesUpload([file])
+      const dup = uploadedFiles.some(e => e.name === name && e.size === blob.size)
+      onFilesUpload(dup ? uploadedFiles : [...uploadedFiles, file])
     } catch (err: any) {
       alert(`Could not load file: ${err.message}\n\nTip: The server must allow cross-origin requests (CORS).`)
     }
