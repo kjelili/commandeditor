@@ -1569,14 +1569,33 @@ export default function PDFTools({
         const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib')
         const doc = await PDFDocument.load(await pdfFiles[0].arrayBuffer())
         const font = await doc.embedFont(StandardFonts.Helvetica)
-        doc.getPages().forEach((page: any, i: number) => {
-          const { width } = page.getSize()
-          page.drawText(`${i + 1}`, { x: width/2 - 6, y: 24, size: 11, font, color: rgb(0.4, 0.4, 0.4) })
+        const size = pnFontSize || 11
+        const pages = doc.getPages()
+        const total = pages.length
+        const fmt = (n: number): string => {
+          if (pnFormat === 'Page 1') return `Page ${n}`
+          if (pnFormat === '1 / N') return `${n} / ${total}`
+          if (pnFormat === '- 1 -') return `- ${n} -`
+          return `${n}`
+        }
+        const margin = 36
+        pages.forEach((page: any, i: number) => {
+          const { width, height } = page.getSize()
+          const label = fmt(pnStart + i)
+          const tw = font.widthOfTextAtSize(label, size)
+          const isTop = pnPosition.startsWith('top')
+          const y = isTop ? height - margin : margin - size * 0.15
+          let x: number
+          if (pnPosition.endsWith('left')) x = margin
+          else if (pnPosition.endsWith('right')) x = width - tw - margin
+          else x = width / 2 - tw / 2 // center
+          page.drawText(label, { x, y, size, font, color: rgb(0.35, 0.35, 0.35) })
         })
         const bytes = await doc.save()
         const blob = pdfBlob(bytes)
         pushUndo(blob)
         onProcessingComplete(blob, toolId)
+        showStatus(`✓ Page numbers added (${pnFormat}, ${pnPosition.replace('-', ' ')})`)
       } catch (e: any) { showStatus(e.message || 'Failed'); onProcessingComplete(new Blob()) }
       return
     }

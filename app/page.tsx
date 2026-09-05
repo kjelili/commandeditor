@@ -399,6 +399,19 @@ export default function Home() {
       const outSuffix = completedOp ? (TOOL_SUFFIX[completedOp] || 'edited') : 'edited'
       const outBase = uploadedFiles[0]?.name.replace(/\.[^.]+$/, '') || 'output'
       setLastOutput(new File([result], `${outBase}-${outSuffix}.pdf`, { type: 'application/pdf' }))
+
+      // ── Chain operations ──────────────────────────────────────────────
+      // Make a chainable single-PDF result the NEW working document, so the
+      // next tool (e.g. Page Numbers after Merge) operates on THIS result
+      // rather than re-reading the original upload. Only for real PDF output
+      // (skips ZIPs, DOCX, and auto-download tools that return an empty blob).
+      const pdfCountBefore = uploadedFiles.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')).length
+      if (result.type === 'application/pdf' && result.size > 0 && (pdfCountBefore <= 1 || op === 'merge')) {
+        const workingName = `${outBase}-${outSuffix}.pdf`
+        setUploadedFiles([new File([result], workingName, { type: 'application/pdf' })])
+        setOriginalSize(result.size)
+        setSelectedPages([]); setPageOrder([])
+      }
     }
   }
 
