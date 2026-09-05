@@ -1750,7 +1750,7 @@ export default function PDFTools({
         const blob = await redactPDF(pdfFiles[0], redactRegions)
         onProcessingComplete(blob, toolId)
         setRedactRegions([])
-        showStatus(`✓ ${redactRegions.length} region${redactRegions.length>1?'s':''} redacted permanently`)
+        showStatus(`✓ ${redactRegions.length} region${redactRegions.length>1?'s':''} redacted — covered content rasterized & permanently removed`)
       } catch(e:any) { showStatus(e.message||'Redact failed'); onProcessingComplete(new Blob()) }
       return
     }
@@ -3111,7 +3111,7 @@ export default function PDFTools({
                 if ((tc.items as any[]).some((it: any) => it.str?.trim())) { foundText = true; break }
               }
               if (foundText) {
-                showStatus('⚠️ Text layer found — apply redactions first, then Flatten to permanently remove it', 7000)
+                showStatus('ℹ️ This file still has an extractable text layer. Redacting a region now rasterizes that page, permanently removing the covered text — no separate Flatten needed.', 8000)
               } else {
                 showStatus('✓ No accessible text layer — redaction appears effective')
               }

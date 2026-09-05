@@ -382,24 +382,63 @@ export async function cropPDF(
   return pdfBlob(await doc.save())
 }
 
-// ─── Redact PDF (burn black rectangles) ───────────────────────────────────
+// ─── Redact PDF (TRUE redaction) ──────────────────────────────────────────
+// SECURITY: drawing a black rectangle over text does NOT remove the text — it
+// stays selectable/extractable underneath. Real redaction must destroy the
+// underlying content. We do that by (1) drawing opaque black boxes, then
+// (2) rasterizing every page that carries a redaction so its text/vector
+// content is permanently flattened to pixels. Pages with no redaction keep
+// their original text layer. In a non-browser context (unit tests, no canvas)
+// we fall back to boxes only — the browser path always rasterizes.
 export async function redactPDF(
   file: File,
-  regions: Array<{ page: number; x: number; y: number; w: number; h: number }>
+  regions: Array<{ page: number; x: number; y: number; w: number; h: number }>,
+  onProgress?: (page: number, total: number) => void
 ): Promise<Blob> {
   const { PDFDocument, rgb } = await import('pdf-lib')
-  const doc = await PDFDocument.load(await file.arrayBuffer())
+
+  // Phase 1 — draw opaque black boxes on a working copy.
+  const boxed = await PDFDocument.load(await file.arrayBuffer())
+  const affected = new Set<number>()
   for (const r of regions) {
-    const page = doc.getPage(r.page - 1)
+    const page = boxed.getPage(r.page - 1)
     const { height } = page.getSize()
-    page.drawRectangle({
-      x: r.x, y: height - r.y - r.h,
-      width: r.w, height: r.h,
-      color: rgb(0, 0, 0),
-      opacity: 1,
-    })
+    page.drawRectangle({ x: r.x, y: height - r.y - r.h, width: r.w, height: r.h, color: rgb(0, 0, 0), opacity: 1 })
+    affected.add(r.page)
   }
-  return pdfBlob(await doc.save())
+  const boxedBytes = await boxed.save()
+
+  // Phase 2 — rasterize the affected pages so the covered content is destroyed.
+  const canRaster = typeof document !== 'undefined'
+  if (!canRaster || affected.size === 0) return pdfBlob(boxedBytes)
+
+  const pdfjsLib = await getPdfjs()
+  const renderDoc = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: boxedBytes.slice(0) }).promise
+  const srcForCopy = await PDFDocument.load(boxedBytes)
+  const out = await PDFDocument.create()
+  const total = renderDoc.numPages
+  for (let i = 1; i <= total; i++) {
+    if (affected.has(i)) {
+      const page = await renderDoc.getPage(i)
+      const scale = 2.2 // ~158 DPI: crisp, and any covered text becomes pixels
+      const vp = page.getViewport({ scale })
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.floor(vp.width); canvas.height = Math.floor(vp.height)
+      const ctx = canvas.getContext('2d')!
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+      await page.render({ canvasContext: ctx, viewport: vp, background: '#ffffff' }).promise
+      const jpegBuf = await new Promise<ArrayBuffer>(res => canvas.toBlob(b => b!.arrayBuffer().then(res), 'image/jpeg', 0.85))
+      const img = await out.embedJpg(jpegBuf)
+      const pw = vp.width / scale, ph = vp.height / scale
+      const pg = out.addPage([pw, ph])
+      pg.drawImage(img, { x: 0, y: 0, width: pw, height: ph })
+    } else {
+      const [copied] = await out.copyPages(srcForCopy, [i - 1])
+      out.addPage(copied)
+    }
+    onProgress?.(i, total)
+  }
+  return pdfBlob(await out.save())
 }
 
 // ─── Extract text / markdown from PDF ────────────────────────────────────
@@ -438,28 +477,17 @@ export async function addQRToPDF(
   x: number, y: number, size: number
 ): Promise<Blob> {
   const { PDFDocument } = await import('pdf-lib')
-  // Generate QR via canvas using a CDN-loaded tiny library (inline fallback)
+  // Generate the QR code entirely ON-DEVICE with bwip-js. (Previously this
+  // fetched from api.qrserver.com, which sent the encoded data to a third-party
+  // server — a direct violation of the zero-upload / no-egress guarantee.)
+  const { default: bwipjs } = await import('bwip-js' as any)
   const qrCanvas = document.createElement('canvas')
-  qrCanvas.width = 200; qrCanvas.height = 200
-  const ctx = qrCanvas.getContext('2d')!
-
-  // Build QR via Google Charts API (no library needed, works offline too via data URL)
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`
-  const img = new Image(); img.crossOrigin = 'anonymous'
-  await new Promise<void>((res, rej) => {
-    img.onload = () => { ctx.drawImage(img, 0, 0, 200, 200); res() }
-    img.onerror = () => {
-      // Offline fallback: draw a placeholder box with text
-      ctx.fillStyle = '#000'
-      ctx.fillRect(0, 0, 200, 200)
-      ctx.fillStyle = '#fff'
-      ctx.fillRect(10, 10, 180, 180)
-      ctx.fillStyle = '#000'
-      ctx.font = '12px monospace'
-      ctx.fillText('QR: ' + url.slice(0, 20), 15, 100)
-      res()
-    }
-    img.src = qrUrl
+  bwipjs.toCanvas(qrCanvas, {
+    bcid: 'qrcode',
+    text: url,
+    scale: 4,
+    padding: 2,
+    backgroundcolor: 'FFFFFF',
   })
 
   const pngBytes = await new Promise<ArrayBuffer>(res =>
