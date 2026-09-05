@@ -77,7 +77,7 @@ export function scanForPII(textByPage: Array<{ page: number; text: string }>): P
     { type: 'Passport',        re: /\b[A-Z]{1,2}\d{6,9}\b/g, severity: 'medium' },
     { type: 'UK Postcode',     re: /\b[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}\b/gi, severity: 'low' },
     { type: 'Date of Birth',   re: /\b(?:dob|date of birth|born)[:\s]+\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/gi, severity: 'high' },
-    { type: 'IPv4 Address',    re: /\b(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/g, severity: 'low' },
+    { type: 'IPv4 Address',    re: /\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/g, severity: 'low' },
   ]
   const results: PIIMatch[] = []
   for (const { page, text } of textByPage) {
