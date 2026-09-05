@@ -17,7 +17,7 @@
  *   - No document data is ever cached or transmitted — processing is
  *     100% client-side; this worker only caches *code*, never user files.
  */
-const VERSION = 'ce-v17';
+const VERSION = 'ce-v18';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 

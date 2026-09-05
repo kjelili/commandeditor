@@ -1088,14 +1088,14 @@ export default function PDFTools({
         const hasTitle = !!(meta as any)?.info?.Title
         checks.push({ id:'title', label:'Document Title Set', pass: hasTitle, detail: hasTitle ? 'Title metadata present.' : 'No document title — add via Metadata tool.', severity:'warning' })
         // Check 3: Page count
-        checks.push({ id:'pages', label:'Not Blank', pass: pdf.numPages > 0, detail: `\${pdf.numPages} page(s) detected.`, severity:'info' })
+        checks.push({ id:'pages', label:'Not Blank', pass: pdf.numPages > 0, detail: `${pdf.numPages} page(s) detected.`, severity:'info' })
         // Check 4: Images without alt (can't fully detect without tags but flag if image-heavy)
         const ops = await p1.getOperatorList()
         const imgCount = ops.fnArray.filter((f:number) => f === 85 || f === 83).length
-        checks.push({ id:'alttext', label:'Image Alt Text', pass: imgCount === 0, detail: imgCount > 0 ? `\${imgCount} images detected on page 1 — ensure alt text is set in the original document.` : 'No images detected on first page.', severity:'warning' })
+        checks.push({ id:'alttext', label:'Image Alt Text', pass: imgCount === 0, detail: imgCount > 0 ? `${imgCount} images detected on page 1 — ensure alt text is set in the original document.` : 'No images detected on first page.', severity:'warning' })
         // Check 5: File size
         const sizeMB = pdfFiles[0].size / 1024 / 1024
-        checks.push({ id:'size', label:'Reasonable File Size', pass: sizeMB < 10, detail: `File is \${sizeMB.toFixed(1)} MB. \${sizeMB > 10 ? 'Large files may be inaccessible to users with slow connections.' : 'Size is acceptable.'}`, severity:'info' })
+        checks.push({ id:'size', label:'Reasonable File Size', pass: sizeMB < 10, detail: `File is ${sizeMB.toFixed(1)} MB. ${sizeMB > 10 ? 'Large files may be inaccessible to users with slow connections.' : 'Size is acceptable.'}`, severity:'info' })
         setA11yResult(checks)
       } catch(e:any) { showStatus('Accessibility check failed: ' + e.message) }
       setA11yLoading(false); return
@@ -1117,7 +1117,7 @@ export default function PDFTools({
       onToolSelect('bookmarks')
       if (bookmarkList.length === 0) {
         // Pre-populate with page list
-        setBookmarkList(Array.from({ length: Math.min(5, 10) }, (_, i) => ({ page: i+1, label: `Section \${i+1}` })))
+        setBookmarkList(Array.from({ length: Math.min(5, 10) }, (_, i) => ({ page: i+1, label: `Section ${i+1}` })))
       }
       return
     }
@@ -1519,26 +1519,25 @@ export default function PDFTools({
       try {
         const blob = await tilePDFPage(pdfFiles[0], { cols: tileCols, rows: tileRows, overlap: 10, pageSize: 'A4', addCropMarks: true, addAlignmentGuides: true })
         pushUndo(blob); onProcessingComplete(blob, toolId)
-        showStatus(`✓ Tiled \${tileCols}×\${tileRows} poster created`)
+        showStatus(`✓ Tiled ${tileCols}×${tileRows} poster created`)
       } catch(e:any) { showStatus(e.message||'Tile failed'); onProcessingComplete(new Blob()) }
       return
     }
 
     if (toolId === 'bookmarks_apply') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      const items = bookmarkList
+        .filter(b => (b.label || '').trim())
+        .map(b => ({ title: b.label.trim(), page: Math.max(0, (b.page || 1) - 1) }))
+      if (items.length === 0) { showStatus('Add at least one bookmark with a label'); return }
       onProcessingStart()
       try {
-        const { PDFDocument } = await import('pdf-lib')
-        const doc = await PDFDocument.load(await pdfFiles[0].arrayBuffer())
-        // pdf-lib v1 does not expose outline writing via a simple API;
-        // We embed bookmarks as named destinations in metadata as a workaround
-        const ctx = doc.context
-        const pages = doc.getPages()
-        doc.setTitle(bookmarkList.map(b=>`p\${b.page}:\${b.label}`).join('|'))
-        const bytes = await doc.save()
-        const blob = pdfBlob(bytes)
+        // Write a REAL navigable PDF outline (not a metadata hack).
+        const { importBookmarks } = await import('@/utils/docTools')
+        const { blob, count } = await importBookmarks(pdfFiles[0], items)
+        pushUndo(blob)
         onProcessingComplete(blob, toolId)
-        showStatus('✓ Bookmarks embedded in metadata')
+        showStatus(`✓ ${count} bookmark${count !== 1 ? 's' : ''} added to the document outline`)
       } catch(e:any) { showStatus(e.message||'Bookmark failed'); onProcessingComplete(new Blob()) }
       return
     }
@@ -1551,7 +1550,7 @@ export default function PDFTools({
         const [tw, th] = targets[normalizeTarget]
         const blob = await normalisePageSizes(pdfFiles[0], tw, th, normalizeMode)
         pushUndo(blob); onProcessingComplete(blob, toolId)
-        showStatus(`✓ All pages normalised to \${normalizeTarget.toUpperCase()}`)
+        showStatus(`✓ All pages normalised to ${normalizeTarget.toUpperCase()}`)
       } catch(e:any) { showStatus(e.message||'Normalise failed'); onProcessingComplete(new Blob()) }
       return
     }
