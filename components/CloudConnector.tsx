@@ -316,6 +316,7 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
       const authorizeUrl = `https://www.dropbox.com/oauth2/authorize?` +
         `client_id=${clientId}&` +
         `redirect_uri=${encodeURIComponent(`${DESKTOP_RELAY_ORIGIN}/api/auth/dropbox/callback`)}&` +
+        `scope=${encodeURIComponent('files.metadata.read files.content.read files.content.write')}&` +
         `response_type=token`;
       runDesktopOAuth('dropbox', authorizeUrl)
         .then(({ accessToken, expiresIn }) => {
@@ -339,6 +340,7 @@ export const CloudConnector: React.FC<Props> = ({ onFileSelect, onSaveToCloud, m
     const url = `https://www.dropbox.com/oauth2/authorize?` +
       `client_id=${clientId}&` +
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `scope=${encodeURIComponent('files.metadata.read files.content.read files.content.write')}&` +
       `response_type=token`;
 
     const popup = window.open(url, 'dropbox_auth', 'width=500,height=600');
