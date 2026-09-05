@@ -401,14 +401,13 @@ export default function Home() {
       setLastOutput(new File([result], `${outBase}-${outSuffix}.pdf`, { type: 'application/pdf' }))
 
       // ── Chain operations ──────────────────────────────────────────────
-      // Make a chainable single-PDF result the NEW working document, so the
-      // next tool (e.g. Page Numbers after Merge) operates on THIS result
-      // rather than re-reading the original upload. Only for real PDF output
-      // (skips ZIPs, DOCX, and auto-download tools that return an empty blob).
+      // Make a chainable single-PDF result the NEW working document so the next
+      // tool (e.g. Page Numbers after Merge) acts on THIS result, not the
+      // original upload. Excludes 'compress' (its Before/After panel needs the
+      // original still loaded) and multi-file single-tool ops (drop siblings).
       const pdfCountBefore = uploadedFiles.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')).length
-      if (result.type === 'application/pdf' && result.size > 0 && (pdfCountBefore <= 1 || op === 'merge')) {
-        const workingName = `${outBase}-${outSuffix}.pdf`
-        setUploadedFiles([new File([result], workingName, { type: 'application/pdf' })])
+      if (result.type === 'application/pdf' && result.size > 0 && op !== 'compress' && (pdfCountBefore <= 1 || op === 'merge')) {
+        setUploadedFiles([new File([result], `${outBase}-${outSuffix}.pdf`, { type: 'application/pdf' })])
         setOriginalSize(result.size)
         setSelectedPages([]); setPageOrder([])
       }

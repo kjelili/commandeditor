@@ -53,8 +53,6 @@ export default function PDFViewer({
 
   const renderingRef = useRef(false);
   const lastFileRef = useRef<string | null>(null);
-  const processedActiveRef = useRef(false);
-  processedActiveRef.current = !!(processedFile && processedFile.size > 0 && processedFile.type.includes('pdf'));
   const showComparisonRef = useRef<boolean>(showComparison);
   showComparisonRef.current = showComparison;
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -246,7 +244,6 @@ export default function PDFViewer({
     if (pdfFiles.length === 0) { setPages([]); setTotalPages(0); setError(null); setPageOrder([]); setShowBeforeAfter(false); return; }
     if (pdfKey === lastFileRef.current) return;
     lastFileRef.current = pdfKey;
-    if (processedActiveRef.current) return; // processed result is displayed by the effect below
     setShowBeforeAfter(false); setAfterThumb(null);
     doRenderAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
