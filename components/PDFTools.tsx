@@ -17,7 +17,7 @@ import {
   detectPageSizes, normalisePageSizes
 } from '@/utils/advancedFeatures'
 import {
-  mergePDFs, splitPDF, compressPDF, editPDF,
+  mergePDFs, splitPDF, compressPDF, compressMultiplePDFs, editPDF,
   convertPDFToImages, convertPDFToWord, convertImagesToPDF,
   convertWordToPDF, convertTextToPDF, convertMarkdownToPDF,
   convertHTMLFileToPDF, downloadBlob, extractImagesPDF, flattenPDF,
@@ -1926,7 +1926,13 @@ export default function PDFTools({
         }
       }
       else if (toolId === 'split') result = await splitPDF(pdfFiles[0], selectedPages)
-      else if (toolId === 'compress') result = await compressPDF(pdfFiles[0], compressionQuality, (p: number, t: number) => onProgress?.(p, t))
+      else if (toolId === 'compress') {
+        if (pdfFiles.length > 1) {
+          result = await compressMultiplePDFs(pdfFiles, compressionQuality, (d: number, t: number) => onProgress?.(d, t))
+        } else {
+          result = await compressPDF(pdfFiles[0], compressionQuality, (p: number, t: number) => onProgress?.(p, t))
+        }
+      }
       else throw new Error('Unknown tool')
       pushUndo(result)
       logSession(toolId.charAt(0).toUpperCase() + toolId.slice(1), result.size)

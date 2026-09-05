@@ -36,39 +36,81 @@ export async function splitPDF(file: File, pageNumbers: number[]): Promise<Blob>
 }
 
 // ─── Compress PDF ──────────────────────────────────────────────────────────
-export async function compressPDF(
+// Raster re-render path — shrinks scanned/image-heavy PDFs, but BLOATS
+// vector/text PDFs (crisp text becomes a big JPEG). Used only when it wins.
+async function rasterCompressBytes(
   file: File,
-  quality = 0.6,
+  quality: number,
   onProgress?: (page: number, total: number) => void
-): Promise<Blob> {
+): Promise<Uint8Array> {
   const pdfjsLib = await getPdfjs()
   const { jsPDF } = await import('jspdf')
   const buf = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: buf }).promise
   const jsPdfDoc = new jsPDF({ unit: 'pt', compress: true })
-  // Rasterize at a legible resolution INDEPENDENT of the quality slider so text
-  // stays crisp; file size is controlled by JPEG quality, not by starving the
-  // render resolution. (Previously scale = quality*2 gave ~1.2x = dull, soft
-  // pages, and also made the PDF page dimensions drift with the slider.)
-  const renderScale = quality < 0.4 ? 1.7 : 2.2 // ~122–158 DPI
-  const jpegQuality = Math.max(0.55, Math.min(0.92, quality)) // floor stops wash-out
+  const renderScale = quality < 0.4 ? 1.5 : 1.8 // ~108–130 DPI: legible without ballooning
+  const jpegQuality = Math.max(0.5, Math.min(0.85, quality))
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const vp = page.getViewport({ scale: renderScale })
     const canvas = document.createElement('canvas')
     canvas.width = Math.floor(vp.width); canvas.height = Math.floor(vp.height)
     const ctx = canvas.getContext('2d')!
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height) // opaque white — no dull black matte under JPEG
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
     await page.render({ canvasContext: ctx, viewport: vp, background: '#ffffff' }).promise
     const imgData = canvas.toDataURL('image/jpeg', jpegQuality)
-    // Keep the PDF page at its true point size; the high-res raster gives DPI.
     const pw = vp.width / renderScale, ph = vp.height / renderScale
     if (i > 1) jsPdfDoc.addPage([pw, ph])
     else { (jsPdfDoc as any).internal.pageSize.width = pw; (jsPdfDoc as any).internal.pageSize.height = ph }
     jsPdfDoc.addImage(imgData, 'JPEG', 0, 0, pw, ph)
     onProgress?.(i, pdf.numPages)
   }
-  return new Blob([jsPdfDoc.output('arraybuffer')], { type: 'application/pdf' })
+  return new Uint8Array(jsPdfDoc.output('arraybuffer'))
+}
+
+export async function compressPDF(
+  file: File,
+  quality = 0.6,
+  onProgress?: (page: number, total: number) => void
+): Promise<Blob> {
+  const buf = await file.arrayBuffer()
+  const original = new Uint8Array(buf)
+  const candidates: Uint8Array[] = [original]
+
+  // 1) Lossless structural re-save (object streams). Never bloats; often shrinks
+  //    vector/text PDFs where rasterizing would only make things worse.
+  try {
+    const { PDFDocument } = await import('pdf-lib')
+    const doc = await PDFDocument.load(buf, { updateMetadata: false })
+    candidates.push(await doc.save({ useObjectStreams: true }))
+  } catch {}
+
+  // 2) Raster re-render — great for scanned/image PDFs, wasteful for text PDFs.
+  try { candidates.push(await rasterCompressBytes(file, quality, onProgress)) }
+  catch {}
+
+  // Pick the smallest result. Because the original is a candidate, the output is
+  // guaranteed never larger than the input — compress can shrink, never bloat.
+  const best = candidates.reduce((a, b) => (b.byteLength < a.byteLength ? b : a))
+  return pdfBlob(best)
+}
+
+// Compress several PDFs at once → a ZIP of the compressed files.
+export async function compressMultiplePDFs(
+  files: File[],
+  quality = 0.6,
+  onProgress?: (done: number, total: number) => void
+): Promise<Blob> {
+  const { default: JSZip } = await import('jszip')
+  const zip = new JSZip()
+  for (let i = 0; i < files.length; i++) {
+    const blob = await compressPDF(files[i], quality)
+    const base = files[i].name.replace(/\.pdf$/i, '')
+    zip.file(`${base}-compressed.pdf`, await blob.arrayBuffer())
+    onProgress?.(i + 1, files.length)
+  }
+  const zBlob = await zip.generateAsync({ type: 'blob' })
+  return new Blob([zBlob], { type: 'application/zip' })
 }
 
 // ─── Edit PDF (add text overlays) ─────────────────────────────────────────
