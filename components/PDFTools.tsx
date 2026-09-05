@@ -2310,7 +2310,7 @@ export default function PDFTools({
         const labels: Record<string,string> = {
           rotate: 'Rotate all pages 90° clockwise',
           pagenum: 'Add page numbers at the bottom centre',
-          extractimgs: 'Extract all pages as PNG images (ZIP)',
+          extractimgs: 'Extract embedded images as PNGs (ZIP). No embedded images? Falls back to full-page PNGs.',
           flatten: 'Rasterize PDF — removes form fields & annotations',
         }
         return (

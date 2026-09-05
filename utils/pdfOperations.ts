@@ -251,26 +251,93 @@ async function _htmlToPDF(html: string, _name: string): Promise<Blob> {
 }
 
 // ─── Extract images from PDF as ZIP ───────────────────────────────────────
+// Convert a pdf.js image object to an RGBA ImageData the canvas can paint.
+function pdfImageToImageData(img: any): ImageData | null {
+  const { width: w, height: h } = img
+  if (!w || !h) return null
+  if (img.bitmap) {
+    const c = document.createElement('canvas'); c.width = w; c.height = h
+    const cx = c.getContext('2d')!; cx.drawImage(img.bitmap, 0, 0)
+    return cx.getImageData(0, 0, w, h)
+  }
+  const data = img.data as Uint8ClampedArray | Uint8Array | undefined
+  if (!data) return null
+  const out = new Uint8ClampedArray(w * h * 4)
+  const px = w * h
+  if (data.length >= px * 4) {            // already RGBA
+    out.set(data.subarray(0, px * 4))
+  } else if (data.length >= px * 3) {     // RGB -> RGBA
+    for (let i = 0, j = 0; i < px; i++, j += 3) {
+      out[i * 4] = data[j]; out[i * 4 + 1] = data[j + 1]; out[i * 4 + 2] = data[j + 2]; out[i * 4 + 3] = 255
+    }
+  } else if (data.length >= px) {         // grayscale -> RGBA
+    for (let i = 0; i < px; i++) { const g = data[i]; out[i * 4] = out[i * 4 + 1] = out[i * 4 + 2] = g; out[i * 4 + 3] = 255 }
+  } else return null
+  return new ImageData(out, w, h)
+}
+
 export async function extractImagesPDF(
   file: File,
   onProgress?: (page: number, total: number) => void
 ): Promise<Blob> {
   const pdfjsLib = await getPdfjs()
+  const OPS: any = (pdfjsLib as any).OPS
   const { default: JSZip } = await import('jszip')
   const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
   const zip = new JSZip()
   const folder = zip.folder('images')!
   const base = file.name.replace(/\.pdf$/i, '')
+
+  // Pass 1 — extract the actual embedded raster images (what the name promises).
+  let extracted = 0
+  const seen = new Set<string>()
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
-    const vp = page.getViewport({ scale: 2 })
-    const canvas = document.createElement('canvas')
-    canvas.width = vp.width; canvas.height = vp.height
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
-    folder.file(`${base}-page-${i}.png`, canvas.toDataURL('image/png').split(',')[1], { base64: true })
+    // Render first so image XObjects are resolved into page.objs.
+    const vp = page.getViewport({ scale: 1 })
+    const rc = document.createElement('canvas')
+    rc.width = Math.max(1, Math.floor(vp.width)); rc.height = Math.max(1, Math.floor(vp.height))
+    try { await page.render({ canvasContext: rc.getContext('2d')!, viewport: vp }).promise } catch {}
+    let ops: any
+    try { ops = await page.getOperatorList() } catch { onProgress?.(i, pdf.numPages); continue }
+    for (let j = 0; j < ops.fnArray.length; j++) {
+      const fn = ops.fnArray[j]
+      if (fn !== OPS.paintImageXObject && fn !== OPS.paintImageXObjectRepeat) continue
+      const name = ops.argsArray[j]?.[0]
+      if (typeof name !== 'string' || seen.has(name)) continue
+      seen.add(name)
+      let img: any
+      try { img = await new Promise((res) => { try { page.objs.get(name, res) } catch { res(null) } }) } catch { img = null }
+      if (!img) continue
+      const idata = pdfImageToImageData(img)
+      if (!idata) continue
+      const c = document.createElement('canvas'); c.width = idata.width; c.height = idata.height
+      c.getContext('2d')!.putImageData(idata, 0, 0)
+      const b64 = c.toDataURL('image/png').split(',')[1]
+      extracted++
+      folder.file(`${base}-image-${extracted}.png`, b64, { base64: true })
+    }
     onProgress?.(i, pdf.numPages)
   }
-  return new Blob([await zip.generateAsync({ type: 'blob' }).then(b => b.arrayBuffer())], { type: 'application/zip' })
+
+  // Fallback — if the PDF has no extractable embedded images (e.g. it is all
+  // vector/text), export each page as a PNG so the tool still returns something.
+  if (extracted === 0) {
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const vp = page.getViewport({ scale: 2 })
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.floor(vp.width); canvas.height = Math.floor(vp.height)
+      const ctx = canvas.getContext('2d')!
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+      await page.render({ canvasContext: ctx, viewport: vp, background: '#ffffff' }).promise
+      folder.file(`${base}-page-${i}.png`, canvas.toDataURL('image/png').split(',')[1], { base64: true })
+      onProgress?.(i, pdf.numPages)
+    }
+  }
+
+  const zBlob = await zip.generateAsync({ type: 'blob' })
+  return new Blob([await zBlob.arrayBuffer()], { type: 'application/zip' })
 }
 
 // ─── Flatten PDF ──────────────────────────────────────────────────────────
