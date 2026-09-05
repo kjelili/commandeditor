@@ -759,7 +759,7 @@ export default function PDFTools({
     // ── Stage 2: Repair PDF ─────────────────────────────────────────────────
     if (toolId === 'repair') {
       if (!hasPDFs) { showStatus('Upload a damaged PDF to repair'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         showStatus(repairMode === 'rasterize' ? 'Rasterizing pages — this can take a minute…' : 'Attempting structure rebuild…')
@@ -1577,7 +1577,7 @@ export default function PDFTools({
 
     if (toolId === 'extractimgs') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         const blob = await extractImagesPDF(pdfFiles[0], (p: number, t: number) => onProgress?.(p, t))
@@ -1588,7 +1588,7 @@ export default function PDFTools({
 
     if (toolId === 'flatten') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         const blob = await flattenPDF(pdfFiles[0], (p: number, t: number) => onProgress?.(p, t))
@@ -1657,7 +1657,7 @@ export default function PDFTools({
 
     if (toolId === 'toexcel') {
       if (!hasPDFs) { showStatus('Upload a PDF to extract tables'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         // Extract text layer per page, detect tabular patterns, export as CSV
@@ -1700,7 +1700,7 @@ export default function PDFTools({
 
     if (toolId === 'totext') {
       if (!hasPDFs) { showStatus('Upload a PDF to extract text'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         const blob = await extractTextFromPDF(pdfFiles[0], textFmt, (p:number,t:number) => onProgress?.(p,t))
@@ -1717,7 +1717,7 @@ export default function PDFTools({
 
     if (toolId === 'crop') {
       if (!hasPDFs) { showStatus('Upload a PDF to crop'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         const blob = await cropPDF(pdfFiles[0], { top: cropTop, right: cropRight, bottom: cropBottom, left: cropLeft })
@@ -1730,7 +1730,7 @@ export default function PDFTools({
     if (toolId === 'qrcode') {
       if (!hasPDFs) { showStatus('Upload a PDF to add QR code'); return }
       if (!qrUrl || qrUrl === 'https://') { showStatus('Enter a URL for the QR code'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         const blob = await addQRToPDF(pdfFiles[0], qrUrl, qrPage, qrX, qrY, qrSize)
@@ -1743,7 +1743,7 @@ export default function PDFTools({
     if (toolId === 'redact') {
       if (!hasPDFs) { showStatus('Upload a PDF to redact'); return }
       if (redactRegions.length === 0) { showStatus('Draw redaction boxes on the page thumbnails first'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       pushUndo(new Blob([await pdfFiles[0].arrayBuffer()],{type:'application/pdf'}))
       onProcessingStart()
       try {
@@ -1790,7 +1790,7 @@ export default function PDFTools({
 
     if (toolId === 'grayscale') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         const blob = await grayscalePDF(pdfFiles[0], (p:number,t:number) => onProgress?.(p,t))
@@ -1818,7 +1818,7 @@ export default function PDFTools({
     if (toolId === 'splitn') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
       if (splitN < 1) { showStatus('Enter a valid page count'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         const blob = await splitByNPages(pdfFiles[0], splitN)
@@ -1831,7 +1831,7 @@ export default function PDFTools({
 
     if (toolId === 'topptx') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         const blob = await pdfToPPTX(pdfFiles[0], (p:number,t:number) => onProgress?.(p,t))
@@ -1869,7 +1869,7 @@ export default function PDFTools({
     if (toolId === 'convert') {
       if (!hasPDFs) { showStatus('Upload a PDF to convert'); return }
       if (files.length > 1) { showStatus('Upload only one PDF for conversion'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
         const base = pdfFiles[0].name.replace(/\.pdf$/i, '')
@@ -1895,7 +1895,7 @@ export default function PDFTools({
 
     if (toolId === 'ocr') {
       if (!hasPDFs) { showStatus('Upload a scanned PDF to OCR'); return }
-      onSizeChange?.(pdfFiles[0].size)
+      onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       showStatus('Running OCR… this may take 30–90 s depending on page count', 120000)
       try {
@@ -1908,7 +1908,7 @@ export default function PDFTools({
     }
 
     if (!hasPDFs) { showStatus('This tool requires a PDF'); return }
-    onSizeChange?.(pdfFiles[0].size)
+    onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
     // NOTE: do NOT call onToolSelect here — it clears processedFile in page.tsx
     onProcessingStart()
     try {
