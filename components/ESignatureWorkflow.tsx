@@ -735,7 +735,9 @@ export const ESignatureWorkflow: React.FC<Props> = ({ pdfBytes, fileName, onSave
                 onChange={e => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    file.text().then(text => setVerifyCert(JSON.parse(text)));
+                    file.text()
+                      .then(text => { setVerifyCert(JSON.parse(text)); })
+                      .catch(() => alert('That file is not a valid CommandEditor signature certificate (JSON).'));
                   }
                 }}
                 style={{ display: 'block', marginTop: '4px' }}
