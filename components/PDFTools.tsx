@@ -1485,7 +1485,12 @@ export default function PDFTools({
         const vp = page.getViewport({ scale: 0.5 })
         const canvas = document.createElement('canvas')
         canvas.width = vp.width; canvas.height = vp.height
-        await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
+        const acx = canvas.getContext('2d')!
+        // White background: pages render transparent, so blank margins would read
+        // as rgb(0,0,0) and the isWhite() margin test would never fire — leaving
+        // auto-crop detecting nothing.
+        acx.fillStyle = '#ffffff'; acx.fillRect(0, 0, canvas.width, canvas.height)
+        await page.render({ canvasContext: acx, viewport: vp, background: '#ffffff' }).promise
         const ctx = canvas.getContext('2d')!
         const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
         const w = canvas.width, h = canvas.height, d = data.data

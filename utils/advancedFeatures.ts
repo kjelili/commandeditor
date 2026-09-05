@@ -554,7 +554,9 @@ export async function pdfToEmailHTML(file: File): Promise<string> {
   const vp = page.getViewport({ scale: 1.5 })
   const canvas = document.createElement('canvas')
   canvas.width = vp.width; canvas.height = vp.height
-  await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
+  const ectx = canvas.getContext('2d')!
+  ectx.fillStyle = '#ffffff'; ectx.fillRect(0, 0, canvas.width, canvas.height) // white bg: JPEG would be black otherwise
+  await page.render({ canvasContext: ectx, viewport: vp, background: '#ffffff' }).promise
   const imgData = canvas.toDataURL('image/jpeg', 0.85)
 
   // Extract text for alt text

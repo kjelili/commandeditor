@@ -126,8 +126,12 @@ export const VisualDiff: React.FC<Props> = ({
     normB.width = width;
     normB.height = height;
 
-    normA.getContext('2d')!.drawImage(canvasA, 0, 0);
-    normB.getContext('2d')!.drawImage(canvasB, 0, 0);
+    // Paint opaque white first: pages render on a transparent canvas, so black
+    // text (rgb 0,0,0) over a blank/transparent area (also rgb 0,0,0) would read
+    // as identical and the diff would miss added/removed text. White makes blank
+    // areas 255,255,255 so real content differences are detected.
+    const nActx = normA.getContext('2d')!; nActx.fillStyle = '#ffffff'; nActx.fillRect(0, 0, width, height); nActx.drawImage(canvasA, 0, 0);
+    const nBctx = normB.getContext('2d')!; nBctx.fillStyle = '#ffffff'; nBctx.fillRect(0, 0, width, height); nBctx.drawImage(canvasB, 0, 0);
 
     // Pixel comparison
     const ctxA = normA.getContext('2d')!;

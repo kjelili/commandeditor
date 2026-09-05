@@ -354,7 +354,9 @@ export async function flattenPDF(
     const vp = page.getViewport({ scale: 1.5 })
     const canvas = document.createElement('canvas')
     canvas.width = vp.width; canvas.height = vp.height
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
+    const fctx = canvas.getContext('2d')!
+    fctx.fillStyle = '#ffffff'; fctx.fillRect(0, 0, canvas.width, canvas.height)
+    await page.render({ canvasContext: fctx, viewport: vp, background: '#ffffff' }).promise
     const pngBytes = await new Promise<ArrayBuffer>(res => canvas.toBlob(b => b!.arrayBuffer().then(res), 'image/png'))
     const img = await out.embedPng(pngBytes)
     const p = out.addPage([vp.width / 1.5, vp.height / 1.5])
@@ -647,7 +649,8 @@ export async function grayscalePDF(
     const canvas = document.createElement('canvas')
     canvas.width = vp.width; canvas.height = vp.height
     const ctx = canvas.getContext('2d')!
-    await page.render({ canvasContext: ctx, viewport: vp }).promise
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+    await page.render({ canvasContext: ctx, viewport: vp, background: '#ffffff' }).promise
     // Desaturate in place
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
     const d = imgData.data
@@ -741,7 +744,9 @@ export async function pdfToPPTX(
     const vp = page.getViewport({ scale: 1.5 })
     const canvas = document.createElement('canvas')
     canvas.width = vp.width; canvas.height = vp.height
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
+    const pctx = canvas.getContext('2d')!
+    pctx.fillStyle = '#ffffff'; pctx.fillRect(0, 0, canvas.width, canvas.height) // white bg: JPEG slides would be black otherwise
+    await page.render({ canvasContext: pctx, viewport: vp, background: '#ffffff' }).promise
     images.push({ data: canvas.toDataURL('image/jpeg', 0.88), w: vp.width, h: vp.height })
     onProgress?.(i, numPages)
   }
@@ -875,7 +880,9 @@ export async function ocrPDF(
     const vp = page.getViewport({ scale: 2.0 }) // High-res for OCR
     const canvas = document.createElement('canvas')
     canvas.width = vp.width; canvas.height = vp.height
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
+    const octx = canvas.getContext('2d')!
+    octx.fillStyle = '#ffffff'; octx.fillRect(0, 0, canvas.width, canvas.height) // white bg: OCR on a transparent (black) canvas mis-reads dark text
+    await page.render({ canvasContext: octx, viewport: vp, background: '#ffffff' }).promise
 
     // Run OCR
     const { data } = await worker.recognize(canvas)
