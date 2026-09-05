@@ -347,8 +347,11 @@ export async function estimateInkCoverage(
     const vp = page.getViewport({ scale: 0.5 })  // smaller for speed
     const canvas = document.createElement('canvas')
     canvas.width = vp.width; canvas.height = vp.height
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
     const ctx = canvas.getContext('2d')!
+    // Paint an opaque white background first, otherwise blank areas render as
+    // transparent (rgb 0,0,0) and get miscounted as full ink coverage.
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+    await page.render({ canvasContext: ctx, viewport: vp, background: '#ffffff' }).promise
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
     let inkPixels = 0
     for (let j = 0; j < data.length; j += 4) {

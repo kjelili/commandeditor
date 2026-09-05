@@ -58,8 +58,8 @@ export default function InvoiceParserTool({ file, onClose, showStatus }: Props) 
               ['Vendor', result.vendor?.name || '—'],
               ['Invoice #', result.invoiceNumber || '—'],
               ['Dates', (result.dates || []).slice(0, 2).join(', ') || '—'],
-              ['Total', result.totals?.total || result.totals?.grandTotal || '—'],
-              ['Tax', result.tax?.amount || result.tax || '—'],
+              ['Total', result.totals?.total?.raw || result.totals?.total?.value || '—'],
+              ['Tax', result.tax ? `${result.tax.amount ?? ''}${result.tax.rate ? ` (${result.tax.rate}%)` : ''}`.trim() || '—' : '—'],
             ].map(([k, v]) => (
               <div key={k as string} className="p-2.5 rounded-xl" style={{ background: 'var(--surface-2)' }}>
                 <p className="section-label">{k}</p><p className="font-semibold truncate" title={String(v)}>{String(v)}</p>
