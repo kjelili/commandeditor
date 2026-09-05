@@ -61,6 +61,43 @@ function nearestLabel(rect: { x: number; y: number; w: number; h: number }, item
 }
 
 export async function detectFormFields(file: File): Promise<DetectedField[]> {
+  // Fast path: if the PDF already has real AcroForm fields, surface those
+  // directly (the visual scan below only finds drawn boxes/lines, so it would
+  // miss already-fillable PDFs). Falls through to visual detection on any error
+  // or when there are no AcroForm fields.
+  try {
+    const buf = await file.arrayBuffer()
+    const { PDFDocument, PDFTextField, PDFCheckBox } = await import('pdf-lib')
+    const adoc = await PDFDocument.load(buf, { ignoreEncryption: true })
+    const aform = adoc.getForm()
+    const apages = adoc.getPages()
+    const acro: DetectedField[] = []
+    for (const fld of aform.getFields()) {
+      const isText = fld instanceof PDFTextField
+      const isCheck = fld instanceof PDFCheckBox
+      if (!isText && !isCheck) continue
+      const widgets: any[] = (fld as any).acroField.getWidgets()
+      widgets.forEach((w: any, i: number) => {
+        let r: any; try { r = w.getRectangle() } catch { return }
+        let pageIdx = 0
+        try {
+          const pr = w.P ? w.P() : (w.dict && w.dict.get ? w.dict.get((PDFDocument as any).PDFName?.of?.('P')) : null)
+          const idx = apages.findIndex((pg: any) => pg.ref === pr)
+          if (idx >= 0) pageIdx = idx
+        } catch { /* default page 0 */ }
+        acro.push({
+          id: `acro-${fld.getName()}-${i}`,
+          page: pageIdx + 1,
+          type: isCheck ? 'checkbox' : 'text',
+          x: r.x, y: r.y, width: r.width, height: r.height,
+          label: fld.getName(),
+          name: fld.getName(),
+        })
+      })
+    }
+    if (acro.length > 0) return acro.sort((a, b) => a.page - b.page || b.y - a.y)
+  } catch { /* fall through to visual detection */ }
+
   const pdfjs = await loadPdfJs()
   const OPS = pdfjs.OPS
   const doc = await pdfjs.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await file.arrayBuffer() }).promise
