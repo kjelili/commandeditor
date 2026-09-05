@@ -14,10 +14,11 @@ interface HealthData {
 
 interface Props {
   file: File
+  files?: File[] // when multiple PDFs are loaded, analysis aggregates across them
   onSuggestTools: (tools: string[]) => void
 }
 
-export default function PDFHealthScore({ file, onSuggestTools }: Props) {
+export default function PDFHealthScore({ file, files, onSuggestTools }: Props) {
   const [data, setData] = useState<HealthData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -30,41 +31,55 @@ export default function PDFHealthScore({ file, onSuggestTools }: Props) {
         const pdfjsLib = await import('pdfjs-dist')
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc)
           pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-        const buf = await file.arrayBuffer()
-        const pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: buf }).promise
-        if (cancelled) return
 
-        const page1 = await pdf.getPage(1)
-        const vp = page1.getViewport({ scale: 1 })
-        const widthMM = (vp.width * 25.4 / 72).toFixed(0)
-        const heightMM = (vp.height * 25.4 / 72).toFixed(0)
+        // Analyse every loaded PDF; totals aggregate across all of them.
+        const targets = (files && files.length > 0 ? files : [file])
+          .filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
+        if (targets.length === 0) { if (!cancelled) setData(null); return }
 
-        let hasText = false, imgCount = 0
-        for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
-          const p = await pdf.getPage(i)
-          const tc = await p.getTextContent()
-          if ((tc.items as any[]).some((it: any) => it.str?.trim())) hasText = true
-          const ops = await p.getOperatorList()
-          imgCount += ops.fnArray.filter((f: number) => f === 85 || f === 83).length
+        let totalPages = 0, totalSize = 0, hasText = false, imgCount = 0
+        let printSizeMM = ''
+        let firstNumPages = 0
+        for (let fi = 0; fi < targets.length; fi++) {
+          const t = targets[fi]
+          totalSize += t.size
+          let pdf: any
+          try { pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: await t.arrayBuffer() }).promise }
+          catch { continue }
+          if (cancelled) return
+          totalPages += pdf.numPages
+          if (fi === 0) {
+            firstNumPages = pdf.numPages
+            const page1 = await pdf.getPage(1)
+            const vp = page1.getViewport({ scale: 1 })
+            printSizeMM = `${(vp.width * 25.4 / 72).toFixed(0)}×${(vp.height * 25.4 / 72).toFixed(0)} mm`
+          }
+          for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
+            const pg = await pdf.getPage(i)
+            const tc = await pg.getTextContent()
+            if ((tc.items as any[]).some((it: any) => it.str?.trim())) hasText = true
+            const ops = await pg.getOperatorList()
+            imgCount += ops.fnArray.filter((f: number) => f === 85 || f === 83).length
+          }
+          if (cancelled) return
         }
-        if (cancelled) return
 
         const h: HealthData = {
-          pages: pdf.numPages,
-          sizeKB: Math.round(file.size / 1024),
+          pages: totalPages,
+          sizeKB: Math.round(totalSize / 1024),
           hasTextLayer: hasText,
           isEncrypted: false,
           imageCount: imgCount,
           isLinearized: false,
-          printSizeMM: `${widthMM}×${heightMM} mm`,
+          printSizeMM: printSizeMM || '—',
         }
         setData(h)
 
         // Smart suggestions
         const suggestions: string[] = []
         if (!hasText) suggestions.push('ocr')
-        if (file.size > 3 * 1024 * 1024) suggestions.push('compress')
-        if (pdf.numPages > 10) suggestions.push('split')
+        if (h.sizeKB > 3 * 1024) suggestions.push('compress')
+        if (h.pages > 10) suggestions.push('split')
         onSuggestTools(suggestions.slice(0, 3))
       } catch {
         if (!cancelled) setData(null)
@@ -73,7 +88,8 @@ export default function PDFHealthScore({ file, onSuggestTools }: Props) {
       }
     })()
     return () => { cancelled = true }
-  }, [file])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file, (files || []).map(f => f.name + ':' + f.size).join('|')])
 
   if (loading) return (
     <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs animate-pulse"
@@ -86,7 +102,9 @@ export default function PDFHealthScore({ file, onSuggestTools }: Props) {
 
   if (!data) return null
 
+  const pdfCount = (files || []).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')).length
   const items = [
+    ...(pdfCount > 1 ? [{ label: 'Files', value: pdfCount, icon: '🗂️' }] : []),
     { label: 'Pages', value: data.pages, icon: '📄' },
     { label: 'Size', value: `${data.sizeKB > 1024 ? (data.sizeKB/1024).toFixed(1)+' MB' : data.sizeKB+' KB'}`, icon: '📦' },
     { label: 'Text layer', value: data.hasTextLayer ? 'Yes ✓' : 'No — try OCR', icon: '📝', alert: !data.hasTextLayer },

@@ -24,6 +24,7 @@ interface PageThumb {
   dataUrl: string;
   width: number;
   height: number;
+  srcName?: string; // source file name when multiple PDFs are loaded
   textItems?: Array<{ str: string; transform: number[]; width: number; height: number }>;
 }
 
@@ -53,7 +54,12 @@ export default function PDFViewer({
   const lastFileRef = useRef<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const pdfFile = files.find(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) || null;
+  const isPdf = (f: File) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
+  const pdfFiles = files.filter(isPdf);
+  const pdfFile = pdfFiles[0] || null;
+  const multiFile = pdfFiles.length > 1;
+  const filesRef = useRef<File[]>(pdfFiles);
+  filesRef.current = pdfFiles;
 
   const initPdfjs = useCallback(async () => {
     const pdfjsLib = await import('pdfjs-dist');
@@ -165,14 +171,74 @@ export default function PDFViewer({
     }
   }, [initPdfjs, renderPageThumb]);
 
+  // Render ALL loaded PDFs concatenated (so multi-file uploads — e.g. before a
+  // Merge — show every document's pages, not just the first).
+  const doRenderAll = useCallback(async () => {
+    const list = filesRef.current;
+    setLoading(true); setError(null); setPages([]); setTotalPages(0);
+    setSearchResults([]); setSearchQuery('');
+    renderingRef.current = true;
+    try {
+      const pdfjsLib = await initPdfjs();
+      let globalNum = 0;
+      for (let fi = 0; fi < list.length; fi++) {
+        const f = list[fi];
+        const buf = await f.arrayBuffer();
+        const hdr = new Uint8Array(buf.slice(0, 5));
+        if (!(hdr[0] === 0x25 && hdr[1] === 0x50 && hdr[2] === 0x44 && hdr[3] === 0x46)) {
+          if (list.length === 1) { setError('preview-not-pdf'); return; }
+          continue;
+        }
+        let pdf: any;
+        try { pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: buf.slice(0) }).promise; }
+        catch (e) { if (list.length === 1) throw e; else continue; }
+        if (fi === 0) setBeforeThumb(await renderPageThumb(pdfjsLib, pdf, 1, 1.4));
+        const thumbScale = pdf.numPages > 40 ? 0.8 : pdf.numPages > 15 ? 1.1 : 1.5;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: thumbScale });
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) continue;
+          canvas.width = viewport.width; canvas.height = viewport.height;
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: ctx, viewport, background: '#ffffff' }).promise;
+          let textItems: PageThumb['textItems'] = [];
+          try {
+            const tc = await page.getTextContent();
+            textItems = (tc.items as any[]).map(item => ({ str: item.str, transform: item.transform, width: item.width, height: item.height }));
+          } catch {}
+          globalNum++;
+          const thumb: PageThumb = {
+            pageNum: globalNum,
+            dataUrl: canvas.toDataURL('image/jpeg', 0.9),
+            width: viewport.width, height: viewport.height, textItems,
+            srcName: list.length > 1 ? f.name : undefined,
+          };
+          setPages(prev => [...prev, thumb]);
+        }
+      }
+      setTotalPages(globalNum);
+      setPageOrder(Array.from({ length: globalNum }, (_, i) => i + 1));
+    } catch (err: any) {
+      const msg = (err?.message || err?.name || String(err)).toLowerCase();
+      if (msg.includes('password') || msg.includes('encrypt')) setError('preview-encrypted');
+      else if (msg.includes('invalid') || msg.includes('corrupt') || msg.includes('stream')) setError('preview-corrupt');
+      else setError('preview-unknown');
+    } finally {
+      setLoading(false); renderingRef.current = false;
+    }
+  }, [initPdfjs, renderPageThumb]);
+
+  const pdfKey = pdfFiles.map(f => `${f.name}:${f.size}`).join('|');
   useEffect(() => {
-    if (!pdfFile) { setPages([]); setTotalPages(0); setError(null); setPageOrder([]); setShowBeforeAfter(false); return; }
-    const key = `${pdfFile.name}-${pdfFile.size}`;
-    if (key === lastFileRef.current) return;
-    lastFileRef.current = key;
+    if (pdfFiles.length === 0) { setPages([]); setTotalPages(0); setError(null); setPageOrder([]); setShowBeforeAfter(false); return; }
+    if (pdfKey === lastFileRef.current) return;
+    lastFileRef.current = pdfKey;
     setShowBeforeAfter(false); setAfterThumb(null);
-    pdfFile.arrayBuffer().then(buf => doRender(buf, false));
-  }, [pdfFile, doRender]);
+    doRenderAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfKey]);
 
   useEffect(() => {
     if (!processedFile || processedFile.size === 0) return;
@@ -393,7 +459,7 @@ export default function PDFViewer({
                   <>
                     <button onClick={() => onPagesSelect([])} className="btn-ghost text-xs px-2 py-1"
                             style={{ color: 'var(--ink-muted)' }} aria-label="Clear page selection">Clear</button>
-                    {onDeletePages && (
+                    {!multiFile && onDeletePages && (
                       <button onClick={() => { if (window.confirm(`Delete ${selectedPages.length} selected page(s)?`)) { onDeletePages(selectedPages); onPagesSelect([]); } }}
                               className="text-xs px-2.5 py-1 rounded-lg font-semibold"
                               style={{ background: '#fee2e2', color: '#dc2626' }}
@@ -481,7 +547,7 @@ export default function PDFViewer({
                   const wasCopied = copiedPage === page.pageNum;
                   return (
                     <div key={page.pageNum} data-page={page.pageNum} role="listitem"
-                         draggable tabIndex={0}
+                         draggable={!multiFile} tabIndex={0}
                          aria-label={`Page ${page.pageNum}${isSelected ? ', selected' : ''}`}
                          aria-selected={isSelected}
                          onKeyDown={e => {
@@ -529,7 +595,7 @@ export default function PDFViewer({
                           </button>
                         )}
                         {/* Per-page rotate buttons */}
-                        {onRotatePage && (
+                        {!multiFile && onRotatePage && (
                           <div className="absolute bottom-1.5 left-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={e => { e.stopPropagation(); onRotatePage(page.pageNum, 'ccw') }}
                                     className="w-5 h-5 rounded flex items-center justify-center text-xs"
@@ -542,7 +608,7 @@ export default function PDFViewer({
                           </div>
                         )}
                         {/* Delete page button */}
-                        {onDeletePages && (
+                        {!multiFile && onDeletePages && (
                           <button onClick={e => { e.stopPropagation(); if (confirm(`Delete page ${page.pageNum}? This cannot be undone from the viewer.`)) onDeletePages([page.pageNum]) }}
                                   className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded flex items-center justify-center text-xs"
                                   style={{background:'rgba(220,38,38,0.85)',color:'white'}}
@@ -564,9 +630,11 @@ export default function PDFViewer({
                           </svg>
                         </div>
                       </div>
-                      <div className="px-2 py-1.5 flex items-center justify-between" style={{ borderTop: '1px solid var(--border)' }}>
-                        <span className="text-xs font-medium" style={{ color: 'var(--ink-muted)' }}>p.{page.pageNum}</span>
-                        {isSelected && <span className="text-xs font-semibold" style={{ color: 'var(--blue-vivid)' }}>✓</span>}
+                      <div className="px-2 py-1.5 flex items-center justify-between gap-1" style={{ borderTop: '1px solid var(--border)' }}>
+                        <span className="text-xs font-medium truncate" style={{ color: 'var(--ink-muted)' }} title={page.srcName || undefined}>
+                          {page.srcName ? page.srcName.replace(/\.pdf$/i, '') : `p.${page.pageNum}`}
+                        </span>
+                        {isSelected && <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'var(--blue-vivid)' }}>✓</span>}
                       </div>
                     </div>
                   );

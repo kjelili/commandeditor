@@ -816,10 +816,12 @@ export default function Home() {
 
         {/* PDF Health Score */}
         {uploadedFiles.length > 0 && (() => {
-          const pdf = uploadedFiles.find(f => f.name.toLowerCase().endsWith('.pdf'))
+          const pdfList = uploadedFiles.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
+          const pdf = pdfList[0]
           return pdf ? (
             <PDFHealthScore
               file={pdf}
+              files={pdfList}
               onSuggestTools={(tools) => setSmartSuggestions(tools)}
             />
           ) : null
