@@ -967,6 +967,9 @@ export default function PDFTools({
 
     if (toolId === 'watermark') {
       if (!hasPDFs) { showStatus('Upload a PDF to watermark'); return }
+      // First click opens the config panel (text, position, colour, opacity);
+      // the panel's "Apply Watermark" button re-invokes this to actually run.
+      if (selectedTool !== 'watermark') { onToolSelect('watermark'); return }
       onProcessingStart()
       try {
         const { PDFDocument, rgb, StandardFonts, degrees } = await import('pdf-lib')
@@ -1564,6 +1567,9 @@ export default function PDFTools({
 
     if (toolId === 'pagenum') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      // First click opens the config panel (position, format, start, font);
+      // the panel's "Add Page Numbers" button re-invokes this to run.
+      if (selectedTool !== 'pagenum') { onToolSelect('pagenum'); return }
       onProcessingStart()
       try {
         const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib')
