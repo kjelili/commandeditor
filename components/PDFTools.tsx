@@ -543,7 +543,9 @@ export default function PDFTools({
       const vp = page.getViewport({ scale })
       const canvas = document.createElement('canvas')
       canvas.width = vp.width; canvas.height = vp.height
-      await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
+      const rctx = canvas.getContext('2d')!
+      rctx.fillStyle = '#ffffff'; rctx.fillRect(0, 0, canvas.width, canvas.height)
+      await page.render({ canvasContext: rctx, viewport: vp, background: '#ffffff' }).promise
       images.push(canvas.toDataURL('image/jpeg', 0.85))
     }
     return images
@@ -2046,7 +2048,9 @@ export default function PDFTools({
         const vp = page.getViewport({ scale: 1.5 })
         const canvas = document.createElement('canvas')
         canvas.width = vp.width; canvas.height = vp.height
-        await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
+        const dctx = canvas.getContext('2d')!
+        dctx.fillStyle = '#ffffff'; dctx.fillRect(0, 0, canvas.width, canvas.height)
+        await page.render({ canvasContext: dctx, viewport: vp, background: '#ffffff' }).promise
         if (!cancelled) setDrawPageImg(canvas.toDataURL('image/jpeg', 0.9))
       } catch {}
     }
