@@ -17,6 +17,7 @@ interface PDFViewerProps {
   onRotatePage?: (pageNum: number, direction: 'cw' | 'ccw') => void;
   thumbColsOverride?: number;
   outputName?: string;
+  showComparison?: boolean; // only meaningful for size ops (e.g. compress)
 }
 
 interface PageThumb {
@@ -30,7 +31,7 @@ interface PageThumb {
 
 export default function PDFViewer({
   files, processedFile, selectedPages, onPagesSelect, editMode, onEditClick, edits = [], onPageOrderChange, originalSize,
-  onDeletePages, onRotatePage, thumbColsOverride = 3, outputName
+  onDeletePages, onRotatePage, thumbColsOverride = 3, outputName, showComparison = false
 }: PDFViewerProps) {
   const [pages, setPages] = useState<PageThumb[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,6 +53,8 @@ export default function PDFViewer({
 
   const renderingRef = useRef(false);
   const lastFileRef = useRef<string | null>(null);
+  const showComparisonRef = useRef<boolean>(showComparison);
+  showComparisonRef.current = showComparison;
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isPdf = (f: File) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
@@ -131,10 +134,16 @@ export default function PDFViewer({
           setPages(prev => [...prev, thumb]);
         }
       } else {
-        // After processing: grab page 1 thumb for before/after
-        const af = await renderPageThumb(pdfjsLib, pdf, 1, 1.4);
-        setAfterThumb(af);
-        setShowBeforeAfter(true);
+        // After processing: only build the Before/After comparison for size
+        // operations (compress). For merge/split/etc. it is misleading, since it
+        // would compare page 1 of the result against page 1 of the first input.
+        if (showComparisonRef.current) {
+          const af = await renderPageThumb(pdfjsLib, pdf, 1, 1.8);
+          setAfterThumb(af);
+          setShowBeforeAfter(true);
+        } else {
+          setShowBeforeAfter(false);
+        }
 
         // Re-render full page list
         setPages([]);
@@ -192,7 +201,7 @@ export default function PDFViewer({
         let pdf: any;
         try { pdf = await pdfjsLib.getDocument({ standardFontDataUrl: '/pdf-standard-fonts/', data: buf.slice(0) }).promise; }
         catch (e) { if (list.length === 1) throw e; else continue; }
-        if (fi === 0) setBeforeThumb(await renderPageThumb(pdfjsLib, pdf, 1, 1.4));
+        if (fi === 0) setBeforeThumb(await renderPageThumb(pdfjsLib, pdf, 1, 1.8));
         const thumbScale = pdf.numPages > 40 ? 0.8 : pdf.numPages > 15 ? 1.1 : 1.5;
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);

@@ -287,7 +287,7 @@ export default function Home() {
     setProcessedFile(null); processedFileRef.current = null
     setSelectedPages([]); setEdits([]); setSelectedTool(null)
     setEditMode(false); setProgress(null); setPageOrder([])
-    setOriginalSize(files[0]?.size)
+    setOriginalSize(files.reduce((sum, f) => sum + f.size, 0) || undefined)
     setLastCompletedTool(null)
     setSmartSuggestions([])
     setOutputFileName(files[0]?.name.replace(/\.[^.]+$/, '') + '-edited' || 'output')
@@ -1127,6 +1127,7 @@ export default function Home() {
           <PDFViewer
             files={uploadedFiles}
             processedFile={processedFile}
+            showComparison={lastCompletedTool === 'compress'}
             selectedPages={selectedPages}
             onPagesSelect={setSelectedPages}
             editMode={editMode}
