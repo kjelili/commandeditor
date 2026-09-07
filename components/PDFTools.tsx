@@ -646,6 +646,7 @@ export default function PDFTools({
     }
 
     if (files.length === 0) { showStatus('Upload files first'); return }
+    if (toolId === 'compress' && hasPDFs && selectedTool !== 'compress') { onToolSelect('compress'); return }
 
     // Macro recording hook
     if (macroRecording) {
@@ -1002,6 +1003,7 @@ export default function PDFTools({
 
     if (toolId === 'aesencrypt') {
       if (files.length === 0) { showStatus('Upload a file first'); return }
+      if (selectedTool !== 'aesencrypt') { onToolSelect('aesencrypt'); return }
       if (!aesPassword) { showStatus(aesMode === 'decrypt' ? 'Enter the password to decrypt' : 'Enter a password for encryption'); return }
       onProcessingStart()
       try {
@@ -1348,6 +1350,7 @@ export default function PDFTools({
 
     if (toolId === 'custody') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      if (selectedTool !== 'custody') { onToolSelect('custody'); return }
       if (!custodyActor.trim()) { showStatus('Enter your name (actor) first'); return }
       onProcessingStart()
       try {
@@ -1748,6 +1751,7 @@ export default function PDFTools({
 
     if (toolId === 'crop') {
       if (!hasPDFs) { showStatus('Upload a PDF to crop'); return }
+      if (selectedTool !== 'crop') { onToolSelect('crop'); return }
       onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
@@ -1760,6 +1764,7 @@ export default function PDFTools({
 
     if (toolId === 'qrcode') {
       if (!hasPDFs) { showStatus('Upload a PDF to add QR code'); return }
+      if (selectedTool !== 'qrcode') { onToolSelect('qrcode'); return }
       if (!qrUrl || qrUrl === 'https://') { showStatus('Enter a URL for the QR code'); return }
       onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
@@ -1773,6 +1778,7 @@ export default function PDFTools({
 
     if (toolId === 'redact') {
       if (!hasPDFs) { showStatus('Upload a PDF to redact'); return }
+      if (selectedTool !== 'redact') { onToolSelect('redact'); return }
       if (redactRegions.length === 0) { showStatus('Draw redaction boxes on the page thumbnails first'); return }
       onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       pushUndo(new Blob([await pdfFiles[0].arrayBuffer()],{type:'application/pdf'}))
@@ -1788,6 +1794,7 @@ export default function PDFTools({
 
     if (toolId === 'unlock') {
       if (!hasPDFs) { showStatus('Upload a PDF to unlock'); return }
+      if (selectedTool !== 'unlock') { onToolSelect('unlock'); return }
       if (!unlockPassword) { showStatus('Enter the PDF password first'); return }
       onProcessingStart()
       try {
@@ -1803,6 +1810,7 @@ export default function PDFTools({
 
     if (toolId === 'headfoot') {
       if (!hasPDFs) { showStatus('Upload a PDF'); return }
+      if (selectedTool !== 'headfoot') { onToolSelect('headfoot'); return }
       if (!hfHeader && !hfFooter) { showStatus('Enter header or footer text'); return }
       onProcessingStart()
       try {
@@ -1893,13 +1901,18 @@ export default function PDFTools({
     }
 
     if (toolId === 'split') {
-      if (selectedPages.length === 0) { showStatus('Select pages from the preview below'); return }
+      if (!hasPDFs) { showStatus('Upload a PDF to split'); return }
       if (files.length > 1) { showStatus('Upload only one PDF for splitting'); return }
+      // First click opens the Split panel so the user can pick pages in the
+      // preview; the panel's "Extract Pages" button re-invokes this to run.
+      if (selectedTool !== 'split') { onToolSelect('split'); return }
+      if (selectedPages.length === 0) { showStatus('Click pages in the preview to select, then press Extract Pages'); return }
     }
 
     if (toolId === 'convert') {
       if (!hasPDFs) { showStatus('Upload a PDF to convert'); return }
       if (files.length > 1) { showStatus('Upload only one PDF for conversion'); return }
+      if (selectedTool !== 'convert') { onToolSelect('convert'); return }
       onSizeChange?.(pdfFiles.reduce((a, f) => a + f.size, 0))
       onProcessingStart()
       try {
