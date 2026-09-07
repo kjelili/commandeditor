@@ -1944,6 +1944,7 @@ export default function PDFTools({
     onProcessingStart()
     try {
       let result: Blob
+      let compressNote = ''
       if (toolId === 'merge') {
         if (pageOrder && pageOrder.length > 0 && pdfFiles.length === 1) {
           const { PDFDocument } = await import('pdf-lib')
@@ -1961,13 +1962,20 @@ export default function PDFTools({
         if (pdfFiles.length > 1) {
           result = await compressMultiplePDFs(pdfFiles, compressionQuality, (d: number, t: number) => onProgress?.(d, t))
         } else {
+          const inSize = pdfFiles[0].size
           result = await compressPDF(pdfFiles[0], compressionQuality, (p: number, t: number) => onProgress?.(p, t))
+          // Size-safe compress keeps the original when nothing smaller is
+          // possible — flag that so we can be honest rather than imply success.
+          if (inSize > 0 && (inSize - result.size) / inSize < 0.02) compressNote = 'already-optimized'
         }
       }
       else throw new Error('Unknown tool')
       pushUndo(result)
       logSession(toolId.charAt(0).toUpperCase() + toolId.slice(1), result.size)
       onProcessingComplete(result, toolId)
+      if (compressNote === 'already-optimized') {
+        showStatus("This PDF is already optimized — no images or embedded fonts to shrink, so it can't compress further without lowering quality. File is unchanged.", 9000)
+      }
     } catch (e: any) { showStatus(e.message || 'Processing failed'); onProcessingComplete(new Blob()) }
   }
 
@@ -2457,6 +2465,11 @@ export default function PDFTools({
             onChange={e => setCompressionQuality(parseFloat(e.target.value))} className="w-full mb-2" />
           <div className="flex justify-between text-xs mb-4" style={{ color: 'rgba(15,23,42,0.4)' }}>
             <span>Smaller file</span><span>Higher quality</span>
+          </div>
+          <p className="text-xs mt-2" style={{ color: 'rgba(15,23,42,0.45)' }}>
+            Works best on scanned or image-heavy PDFs. Text-only PDFs are usually already optimized and may not shrink further.
+          </p>
+          <div style={{ display: 'none' }}>
           </div>
           <button onClick={() => handleToolAction('compress')} className="btn-primary w-full">Compress PDF</button>
         </div>
