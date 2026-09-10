@@ -41,6 +41,7 @@ import {
 } from '@/utils/docTools'
 import { buildFacturXXml, attachEInvoice, computeTotals, InvoiceLine } from '@/utils/einvoice'
 import ListenTool from '@/components/ListenTool'
+import MeasureTool from '@/components/MeasureTool'
 import ScanToPDFTool from '@/components/ScanToPDFTool'
 import WatchFolderTool from '@/components/WatchFolderTool'
 import NetworkAuditTool from '@/components/NetworkAuditTool'
@@ -104,6 +105,7 @@ const TOOLS = [
   { id: 'rearrange',   name: 'Rearrange',   fullName: 'Rearrange Pages',     emoji: '⇅',  desc: 'Drag & reorganize',requiresPDF: true,   color: '#ea580c', colorLight: '#ffedd5' },
   { id: 'redact',      name: 'Redact',      fullName: 'Redact Content',       emoji: '⬛', desc: 'Black-out text',  requiresPDF: true,    color: '#1c1917', colorLight: '#f5f5f4' },
   { id: 'sanitize',    name: 'Sanitize',    fullName: 'Sanitize Document',    emoji: '🧼', desc: 'Strip hidden data', requiresPDF: true,   color: '#7c3aed', colorLight: '#ede9fe' },
+  { id: 'measure',     name: 'Measure',     fullName: 'Measure & Scale',      emoji: '📐', desc: 'Distances & areas', requiresPDF: true,    color: '#0d9488', colorLight: '#ccfbf1' },
   { id: 'crop',        name: 'Crop',        fullName: 'Crop Pages',           emoji: '✂️', desc: 'Trim margins',    requiresPDF: true,    color: '#0891b2', colorLight: '#cffafe' },
   { id: 'totext',      name: 'To Text',     fullName: 'Extract Text',         emoji: '📝', desc: 'TXT or Markdown', requiresPDF: true,    color: '#4338ca', colorLight: '#e0e7ff' },
   { id: 'qrcode',      name: 'QR Code',     fullName: 'Add QR Code',          emoji: '⬛', desc: 'Insert scannable', requiresPDF: true,   color: '#0d9488', colorLight: '#ccfbf1' },
@@ -3550,6 +3552,10 @@ export default function PDFTools({
       )}
 
       {/* ── Scan to PDF panel (works with no file uploaded) ─────────────── */}
+      {selectedTool === 'measure' && files.length > 0 && hasPDFs && (
+        <MeasureTool file={pdfFiles[0]} showStatus={showStatus} onClose={() => onToolSelect('')} />
+      )}
+
       {selectedTool === 'scantopdf' && (
         <ScanToPDFTool
           onComplete={(blob) => { onProcessingStart(); onProcessingComplete(blob, 'scantopdf') }}
