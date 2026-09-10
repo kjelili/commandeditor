@@ -5,11 +5,11 @@ import './globals.css'
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.commandeditor.com'),
   title: {
-    default: 'CommandEditor — Free PDF Editor Online, No Upload (113 Tools)',
+    default: 'CommandEditor — Free PDF Editor Online, No Upload (114 Tools)',
     template: '%s · CommandEditor',
   },
   description:
-    'Free online PDF editor that never uploads your files. CommandEditor is a private, browser-based PDF & document toolkit with 113 tools — including an on-device AI assistant, cryptographic e-signatures, document fingerprinting, redaction, OCR, and 60+ hands-free voice commands. Everything runs in your browser; your files never leave your device.',
+    'Free online PDF editor that never uploads your files. CommandEditor is a private, browser-based PDF & document toolkit with 114 tools — including an on-device AI assistant, cryptographic e-signatures, document fingerprinting, redaction, OCR, and 60+ hands-free voice commands. Everything runs in your browser; your files never leave your device.',
   keywords: [
     'PDF editor', 'free PDF tools', 'merge PDF', 'split PDF', 'compress PDF',
     'PDF voice commands', 'voice-controlled PDF', 'hands-free PDF', 'accessible PDF editor',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'CommandEditor — Free PDF Editor Online, No Upload',
     description:
-      '113 PDF tools, an on-device AI assistant, cryptographic e-signatures, and 60+ hands-free voice commands — zero uploads. Every operation runs in your browser; your documents never leave your device.',
+      '114 PDF tools, an on-device AI assistant, cryptographic e-signatures, and 60+ hands-free voice commands — zero uploads. Every operation runs in your browser; your documents never leave your device.',
     type: 'website',
     url: 'https://www.commandeditor.com',
     siteName: 'CommandEditor',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'CommandEditor — Free PDF Editor Online, No Upload',
-    description: 'A private PDF toolkit with 113 tools — AI assistant, e-signatures, redaction, and 60+ voice commands, all in your browser. No uploads, no sign-up, free forever.',
+    description: 'A private PDF toolkit with 114 tools — AI assistant, e-signatures, redaction, and 60+ voice commands, all in your browser. No uploads, no sign-up, free forever.',
   },
   robots: { index: true, follow: true },
   // Search Console / Bing verification — set the codes as Vercel env vars
@@ -74,7 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               applicationCategory: 'ProductivityApplication',
               operatingSystem: 'Any (browser-based)',
               description:
-                'Private PDF and document toolkit. 113 tools — including an on-device AI assistant and cryptographic e-signatures — that run entirely in your browser. Your files never leave your device.',
+                'Private PDF and document toolkit. 114 tools — including an on-device AI assistant and cryptographic e-signatures — that run entirely in your browser. Your files never leave your device.',
               offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
               featureList: [
                 'Merge, split, compress PDF',

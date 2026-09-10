@@ -113,7 +113,7 @@ export default function ToolLandingPage({ params }: { params: { slug: string } }
         </div>
 
         <p className="text-xs mt-12" style={{ color: 'rgba(255,255,255,0.4)' }}>
-          CommandEditor is open source and free forever. 113 tools, 60+ voice commands,
+          CommandEditor is open source and free forever. 114 tools, 60+ voice commands,
           on-device AI — your files never leave your device.
         </p>
       </div>
