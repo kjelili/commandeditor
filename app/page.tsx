@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import FileUpload from '@/components/FileUpload'
 import PDFTools from '@/components/PDFTools'
+import { buildOutputName } from '@/utils/outputName'
 import PDFViewer from '@/components/PDFViewer'
 import VoiceCommand, { VoiceCommandType } from '@/components/VoiceCommand'
 import OnboardingTour from '@/components/OnboardingTour'
@@ -356,7 +357,7 @@ export default function Home() {
     return () => window.removeEventListener('appinstalled', onInstalled)
   }, [])
 
-  const handleProcessingComplete = (result: Blob, toolName?: string) => {
+  const handleProcessingComplete = (result: Blob, toolName?: string, sourceName?: string) => {
     setProcessedFile(result); processedFileRef.current = result
     setProcessing(false); setProgress(null)
     if (result.size > 0) {
@@ -369,8 +370,8 @@ export default function Home() {
       const op = toolName || selectedTool
       if (op) {
         const suffix = TOOL_SUFFIX[op] || 'edited'
-        const original = uploadedFiles[0]?.name.replace(/\.[^.]+$/, '') || 'output'
-        setOutputFileName(`${original}-${suffix}`)
+        const src = sourceName || uploadedFiles[0]?.name || 'output'
+        setOutputFileName(buildOutputName(src, suffix))
       }
       // Provenance log
       if (op) {
@@ -397,8 +398,8 @@ export default function Home() {
       // Desktop pipeline: track output for print / email
       const completedOp = toolName || selectedTool
       const outSuffix = completedOp ? (TOOL_SUFFIX[completedOp] || 'edited') : 'edited'
-      const outBase = uploadedFiles[0]?.name.replace(/\.[^.]+$/, '') || 'output'
-      setLastOutput(new File([result], `${outBase}-${outSuffix}.pdf`, { type: 'application/pdf' }))
+      const outName = buildOutputName(sourceName || uploadedFiles[0]?.name || 'output', outSuffix)
+      setLastOutput(new File([result], `${outName}.pdf`, { type: 'application/pdf' }))
 
       // ── Chain operations ──────────────────────────────────────────────
       // Make a chainable single-PDF result the NEW working document so the next
@@ -407,7 +408,7 @@ export default function Home() {
       // original still loaded) and multi-file single-tool ops (drop siblings).
       const pdfCountBefore = uploadedFiles.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')).length
       if (result.type === 'application/pdf' && result.size > 0 && op !== 'compress' && (pdfCountBefore <= 1 || op === 'merge')) {
-        setUploadedFiles([new File([result], `${outBase}-${outSuffix}.pdf`, { type: 'application/pdf' })])
+        setUploadedFiles([new File([result], `${outName}.pdf`, { type: 'application/pdf' })])
         setOriginalSize(result.size)
         setSelectedPages([]); setPageOrder([])
       }

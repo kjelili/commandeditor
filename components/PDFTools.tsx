@@ -63,7 +63,7 @@ interface PDFToolsProps {
   selectedTool: string | null
   onToolSelect: (tool: string) => void
   onProcessingStart: () => void
-  onProcessingComplete: (result: Blob, toolId?: string) => void
+  onProcessingComplete: (result: Blob, toolId?: string, sourceName?: string) => void
   selectedPages: number[]
   onEditsChange?: (edits: Array<{ pageIndex: number; text: string; x: number; y: number }>) => void
   currentEdits?: Array<{ pageIndex: number; text: string; x: number; y: number }>
@@ -690,7 +690,9 @@ export default function PDFTools({
         else if (hasHTML && files.length === 1) result = await convertHTMLFileToPDF(file)
         else if (hasImages) result = await convertImagesToPDF(files.filter(f => f.type.startsWith('image/') || f.name.match(/\.(png|jpg|jpeg|webp|gif|bmp)$/i)))
         else throw new Error('Unsupported type')
-        onProcessingComplete(result, toolId)
+        const convertibles = files.filter(f => !(f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')))
+        const srcName = (convertibles[0] || file)?.name
+        onProcessingComplete(result, toolId, srcName)
       } catch (e: any) { showStatus(e.message || 'Conversion failed'); onProcessingComplete(new Blob()) }
       return
     }
